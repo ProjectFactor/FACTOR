@@ -129,6 +129,12 @@ public:
         consensus.nDeadpoolAnnounceValidity = 672;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
 
+        // Hard diff removal hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
+
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
@@ -231,6 +237,12 @@ public:
         consensus.nDeadpoolAnnounceMaturity = 5;
         consensus.nDeadpoolAnnounceValidity = 100;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
+
+        // Hard diff removal hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
 
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
@@ -389,6 +401,12 @@ public:
         consensus.nDeadpoolAnnounceValidity = 100;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
 
+        // Hard diff removal hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
+
         vFixedSeeds.clear();
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
@@ -466,6 +484,12 @@ public:
         consensus.nDeadpoolAnnounceMaturity = 5;
         consensus.nDeadpoolAnnounceValidity = 100;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
+
+        // Hard diff removal hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
 
         UpdateActivationParametersFromArgs(args);
 
