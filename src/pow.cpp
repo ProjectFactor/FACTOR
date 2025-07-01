@@ -85,24 +85,40 @@ int32_t CalculateDifficultyDelta(const int32_t nBits, const double nPeriodTimePr
 
         // If block time is too long, decrease to the previous even diff
         if (nPeriodTimeProportionConsumed > 1.0333f) {
+            int32_t nRetarget = 0;
             if (nBits % 2 == 0) {
                 // Even diff to even diff
-                return -2;
+                nRetarget = -2;
             } else {
                 // Odd diff to even diff
-                return -1;
+                nRetarget = -1;
             }
+
+            // If block time is way too long (>60 min on mainnet), decrease by 4 or 3 instead of by 2 or 1
+            if (nPeriodTimeProportionConsumed > 2.0f) {
+                nRetarget -= 2;
+            }
+
+            return nRetarget;
         }
 
-        // If block time is too long, increase to the next even diff
+        // If block time is too short, increase to the next even diff
         if (nPeriodTimeProportionConsumed < 0.90f) {
+            int32_t nRetarget = 0;
             if (nBits % 2 == 0) {
                 // Even diff to even diff
-                return 2;
+                nRetarget = 2;
             } else {
                 // Odd diff to even diff
-                return 1;
+                nRetarget = 1;
             }
+
+            // If block time is way too short (<15 min on mainnet), increase by 4 or 3 instead of by 2 or 1
+            if (nPeriodTimeProportionConsumed < 0.5f) {
+                nRetarget += 2;
+            }
+
+            return nRetarget;
         }
 
         // The block time is just right. See if we should move away from an odd diff
