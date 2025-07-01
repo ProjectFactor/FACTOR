@@ -240,9 +240,9 @@ public:
 
         // Hard diff removal hardfork
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = (4 * consensus.nMinerConfirmationWindow);
 
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
