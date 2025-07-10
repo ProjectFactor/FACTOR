@@ -28,6 +28,9 @@
 //Fancy popcount implementation
 #include <libpopcnt.h>
 
+// DeploymentActiveAfter
+#include <deploymentstatus.h>
+
 uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* pblock, const Consensus::Params& params)
 {
     assert(pindexLast != nullptr);
@@ -62,6 +65,73 @@ uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* 
     return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
 }
 
+int32_t CalculateDifficultyDelta(const int32_t nBits, const double nPeriodTimeProportionConsumed, const bool isHardDiffRemoved) {
+    if (!isHardDiffRemoved) {
+        // Original difficulty adjustment algorithm
+
+        //Note for mainnet:
+        //If it takes more than 1 minute over the target blocktime, reduce difficulty.
+        if (nPeriodTimeProportionConsumed > 1.0333f)
+            return -1;
+
+        //Note for mainnet:
+        //To increase difficulty the network must be able to move the blocktime
+        //3 minutes under target blocktime. This is to avoid the difficulty becoming
+        //too much work for the network to handle. Based on heuristics.
+        if (nPeriodTimeProportionConsumed < 0.90f)
+            return 1;
+    } else {
+        // Difficulty adjustment algorithm that skips over odd aka. hard diffs (2025)
+
+        // If block time is too long, decrease to the previous even diff
+        if (nPeriodTimeProportionConsumed > 1.0333f) {
+            int32_t nRetarget = 0;
+            if (nBits % 2 == 0) {
+                // Even diff to even diff
+                nRetarget = -2;
+            } else {
+                // Odd diff to even diff
+                nRetarget = -1;
+            }
+
+            // If block time is way too long (>60 min on mainnet), decrease by 4 or 3 instead of by 2 or 1
+            if (nPeriodTimeProportionConsumed > 2.0f) {
+                nRetarget -= 2;
+            }
+
+            return nRetarget;
+        }
+
+        // If block time is too short, increase to the next even diff
+        if (nPeriodTimeProportionConsumed < 0.90f) {
+            int32_t nRetarget = 0;
+            if (nBits % 2 == 0) {
+                // Even diff to even diff
+                nRetarget = 2;
+            } else {
+                // Odd diff to even diff
+                nRetarget = 1;
+            }
+
+            // If block time is way too short (<15 min on mainnet), increase by 4 or 3 instead of by 2 or 1
+            if (nPeriodTimeProportionConsumed < 0.5f) {
+                nRetarget += 2;
+            }
+
+            return nRetarget;
+        }
+
+        // The block time is just right. See if we should move away from an odd diff
+        if (nBits % 2 == 0) {
+            // Already even diff. Don't change difficulty
+            return 0;
+        } else {
+            // Currently odd diff. Decrease diff by 1 to reach an even difficulty
+            return -1;
+        }
+    }
+}
+
 uint16_t CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
 {
     if (params.fPowNoRetargeting)
@@ -70,22 +140,10 @@ uint16_t CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirst
     // Compute constants
     const int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
     const double nPeriodTimeProportionConsumed = (double)nActualTimespan / (double)params.nPowTargetTimespan;
+    const bool isHardDiffRemoved = DeploymentActiveAfter(pindexLast, params, Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL);
 
     //Variable to set difficulty delta
-    int32_t nRetarget = 0;
-
-    //Note for mainnet:
-    //If it takes more than 1 minute over the target blocktime, reduce difficulty.
-    if (nPeriodTimeProportionConsumed > 1.0333f)
-        nRetarget = -1;
-
-    //Note for mainnet:
-    //To increase difficulty the network must be able to move the blocktime
-    //3 minutes under target blocktime. This is to avoid the difficulty becoming
-    //too much work for the network to handle. Based on heuristics.
-    if (nPeriodTimeProportionConsumed < 0.90f)
-        nRetarget = 1;
-
+    int32_t nRetarget = CalculateDifficultyDelta(pindexLast->nBits, nPeriodTimeProportionConsumed, isHardDiffRemoved);
 
     return (int32_t)pindexLast->nBits + nRetarget;
 }
