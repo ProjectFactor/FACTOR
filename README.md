@@ -1,10 +1,10 @@
-#  <div align="center">  FACT0RN  </div>
+#  <div align="center">  FACTOR  </div>
 
 A blockchain replacing hashing as Proof of Work (PoW) by integer factorization. A fork from bitcoin V22.0. The proof-of-work component has been replaced by Integer Factorization but everything else remains intact including the cli tool and all the RPC calls.
 
-The FACT0RN blockchain seeks to allow its user to pay FACT coins to place integers in a deadpool for factorization. 
+The FACTOR blockchain seeks to allow its user to pay FACT coins to place integers in a deadpool for factorization. 
 
-Website: https://fact0rn.io <br>
+Website: https://projectfactor.io <br>
 Whitepaper: [https://drive.google.com/file/d/1AJ5_MTIhdI-lz8X35WGi20JNnbN_q2vn/view](https://drive.google.com/file/d/1AJ5_MTIhdI-lz8X35WGi20JNnbN_q2vn/view) <br>
 Coinbase: https://blog.coinbase.com/fact0rn-blockchain-integer-factorization-as-proof-of-work-pow-bc48c6f2100b <br>
 
@@ -12,8 +12,7 @@ Contact:
 
 E-mail: fact0rn@pm.me <br>
 Discord: [https://discord.gg/tE2BNpgmtH](https://discord.gg/tE2BNpgmtH) <br>
-Twitter: [https://twitter.com/FACT0RN](https://twitter.com/FACT0RN) <br>
-Reddit: https://www.reddit.com/r/FACT0RN/ <br>
+Twitter: [https://twitter.com/ProjectFactor](https://twitter.com/ProjectFactor) <br>
 
 Listed on the following exchanges:
 1. https://xeggex.com/asset/fact <br>
@@ -22,7 +21,7 @@ Listed on the following exchanges:
 
 ## Coin Distribution
 
-The FACT0RN blockchain had no pre-sale, pre-allocation, pre-mining, pre-distribution, or any mechanism to distribute or sell coins in any way prior to launch. The only way to get FACT coins is to mine them yourself. This has been true from the beginning and will continue to be true until FACT0RN is listed on an exchange. (Okay, now that we have been listed you can buy them.)
+The FACTOR blockchain had no pre-sale, pre-allocation, pre-mining, pre-distribution, or any mechanism to distribute or sell coins in any way prior to launch. The only way to get FACT coins is to mine them yourself. This has been true from the beginning and will continue to be true until FACTOR is listed on an exchange. (Okay, now that we have been listed you can buy them.)
 
 ## Installation
 
@@ -96,7 +95,7 @@ To run testnet do:
 ```
 ./factornd -rpcuser=<set your username here> -rpcpassword=<set your password here> -testnet
 ```
-You will need to know this to run FACTOR.py from the mining code at ``https://github.com/FACT0RN/factoring``.
+You will need to know this to run FACTOR.py from the mining code at ``https://github.com/ProjectFactor/factoring``.
  
 
 ## Mining
@@ -153,7 +152,7 @@ You will need the value from "scriptPubKey" to mine. In this example, this perso
 would use the value "0014a8a44c20e7b12de5405bb864cd9d5be3c5bd055a" to pass to the 
 python mining script. This would credit the rewards of the block to their address.
 
-Once you have this scriptPubKey value from your wallet clone the miner code from ``https://github.com/FACT0RN/factoring``. 
+Once you have this scriptPubKey value from your wallet clone the miner code from ``https://github.com/ProjectFactoring/factoring``. 
 
 You will need to install the following python packages:
 
