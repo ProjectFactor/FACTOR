@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <cstdint>
 
 class CBlockIndex;
 class CTransaction;
