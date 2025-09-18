@@ -80,6 +80,8 @@ int32_t CalculateDifficultyDelta(const int32_t nBits, const double nPeriodTimePr
         //too much work for the network to handle. Based on heuristics.
         if (nPeriodTimeProportionConsumed < 0.90f)
             return 1;
+
+        return 0;
     } else {
         // Difficulty adjustment algorithm that skips over odd aka. hard diffs (2025)
 
