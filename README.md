@@ -10,7 +10,7 @@ Coinbase: https://blog.coinbase.com/fact0rn-blockchain-integer-factorization-as-
 
 Contact:
 
-E-mail: fact0rn@pm.me <br>
+E-mail: team@projectfactor.io <br>
 Discord: [https://discord.gg/tE2BNpgmtH](https://discord.gg/tE2BNpgmtH) <br>
 Twitter/X: [https://twitter.com/ProjectFactor](https://X.com/ProjectFactor) <br>
 
