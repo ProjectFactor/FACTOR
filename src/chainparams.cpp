@@ -162,6 +162,17 @@ public:
 
         bech32_hrp = "fact";
 
+        vSeeds.emplace_back("sn0.projectfactor.io");
+        vSeeds.emplace_back("sn1.projectfactor.io");
+        vSeeds.emplace_back("sn2.projectfactor.io");
+        vSeeds.emplace_back("sn3.projectfactor.io");
+        vSeeds.emplace_back("sn4.projectfactor.io");
+        vSeeds.emplace_back("sn5.projectfactor.io");
+        vSeeds.emplace_back("sn6.projectfactor.io");
+        vSeeds.emplace_back("sn7.projectfactor.io");
+        vSeeds.emplace_back("sn8.projectfactor.io");
+        vSeeds.emplace_back("sn9.projectfactor.io");
+
         vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_main), std::end(chainparams_seed_main));
 
         fDefaultConsistencyChecks = false;
