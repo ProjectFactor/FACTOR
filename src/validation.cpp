@@ -2126,7 +2126,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
 
             if (deadpool_active) {
                 // Check all non-coinbase transactions for deadpool claims and validate there has been an announcement
-                if (!DeadpoolClaimIsAnnounced(tx, view, m_announce_db.get(), m_params.GetConsensus(), pindex->nHeight+1, tx_state)) {
+                if (!DeadpoolClaimIsAnnounced(tx, view, m_announce_db.get(), m_params.GetConsensus(), pindex->nHeight, tx_state)) {
                     state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
                                   tx_state.GetRejectReason(), tx_state.GetDebugMessage());
                     return error("ConnectBlock(): DeadpoolClaimChecks on %s failed with %s",
