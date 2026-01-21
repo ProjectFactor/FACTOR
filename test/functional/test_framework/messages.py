@@ -861,12 +861,10 @@ class CBlock(CBlockHeader):
         while not DONE:
             #Get random nonce
             nonce = random.randint(0, (1<<64) - 1 )
-            blockHeader.nNonce = nonce
             self.nNonce        = nonce
 
             #Get W from gHash
             W = ghash_from_cblockheader(self, params.hashRounds)
-            W = W.toInt()
 
             #Get candidates to solve the block
             candidates =  [ n for n in range( W - 16*W.bit_length(), W + 16*W.bit_length()) if gcd(n, siev) == 1 ]
@@ -887,7 +885,7 @@ class CBlock(CBlockHeader):
                     #Check they have the same number of binary digits
                     if ( factorList[0].bit_length() == factorList[1].bit_length()):
                         #Check they have the expected number of binary digits
-                        if ( blockHeader.nBits//2 + ( blockHeader.nBits&1) == factorList[0].bit_length() ):
+                        if ( self.nBits//2 + ( self.nBits&1) == factorList[0].bit_length() ):
                             print( factorList[0].bit_length(), factorList[1].bit_length() )
 
                             #Update values for the found block
