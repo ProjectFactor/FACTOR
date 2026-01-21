@@ -35,8 +35,16 @@ uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* 
 {
     assert(pindexLast != nullptr);
 
+    // Check if interim DAA is active
+    const bool isInterimDAAActive = TimeLimitedDeploymentActive(pindexLast, params, Consensus::DEPLOYMENT_INTERIM_DAA);
+
+    // Use 84-block interval when interim DAA active, otherwise standard
+    const int64_t adjustmentInterval = isInterimDAAActive
+        ? Consensus::INTERIM_DAA_PERIOD
+        : params.DifficultyAdjustmentInterval();
+
     // Only change once per difficulty adjustment interval
-    if ((pindexLast->nHeight + 1) % params.DifficultyAdjustmentInterval() != 0) {
+    if ((pindexLast->nHeight + 1) % adjustmentInterval != 0) {
         if (params.fPowAllowMinDifficultyBlocks) {
             // Special difficulty rule for testnet:
             // If the new block's timestamp is more than 2* 10 minutes
@@ -46,7 +54,7 @@ uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* 
             } else {
                 // Return the last non-special-min-difficulty-rules-block
                 const CBlockIndex* pindex = pindexLast;
-                while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval() != 0 &&
+                while (pindex->pprev && pindex->nHeight % adjustmentInterval != 0 &&
                        pindex->nBits == params.powLimit) {
                     pindex = pindex->pprev;
                 }
@@ -56,13 +64,18 @@ uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* 
         return pindexLast->nBits;
     }
 
-    // Go back by what we want to be 14 days worth of blocks
-    int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval() - 1);
+    // Get first block of period
+    int nHeightFirst = pindexLast->nHeight - (adjustmentInterval - 1);
     assert(nHeightFirst >= 0);
     const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
     assert(pindexFirst);
 
-    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
+    // Calculate target timespan based on active DAA
+    const int64_t nTargetTimespan = isInterimDAAActive
+        ? (Consensus::INTERIM_DAA_PERIOD * params.nPowTargetSpacing)
+        : params.nPowTargetTimespan;
+
+    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params, nTargetTimespan, isInterimDAAActive);
 }
 
 int32_t CalculateDifficultyDelta(const int32_t nBits, const double nPeriodTimeProportionConsumed, const bool isHardDiffRemoved) {
@@ -134,18 +147,70 @@ int32_t CalculateDifficultyDelta(const int32_t nBits, const double nPeriodTimePr
     }
 }
 
-uint16_t CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
+/**
+ * Interim DAA: proportion-based difficulty adjustment with aggressive thresholds.
+ * Uses nPeriodTimeProportionConsumed like existing DAA but with different thresholds.
+ * Also ensures result skips odd difficulties (like HARD_DIFF_REMOVAL mode).
+ *
+ * @param nBits Current difficulty bits
+ * @param nPeriodTimeProportionConsumed Ratio of actual time to target time
+ */
+int32_t CalculateInterimDifficultyDelta(const int32_t nBits, const double nPeriodTimeProportionConsumed)
+{
+    int32_t nRetarget = 0;
+
+    // Make sure we're going to an even aka. easy difficulty
+    if (nBits % 2 != 0) {
+        nRetarget -= 1;
+    }
+
+    // Too fast, increase difficulty
+    // 0.5 = 15min avg, 0.6667 ~= 20min avg, 0.9 = 27min avg for 30min target
+    if (nPeriodTimeProportionConsumed < 0.5f) {
+        nRetarget = 6;
+    } else if (nPeriodTimeProportionConsumed < 0.6667f) {
+        nRetarget = 4;
+    } else if (nPeriodTimeProportionConsumed < 0.9f) {
+        nRetarget = 2;
+    }
+
+    // Too slow, decrease difficulty
+    // 2.0 = 60min avg, 1.5 = 45min avg, 1.0333 ~= 31min avg for 30min target
+    else if (nPeriodTimeProportionConsumed > 2.0f) {
+        nRetarget = -6;
+    } else if (nPeriodTimeProportionConsumed > 1.5f) {
+        nRetarget = -4;
+    } else if (nPeriodTimeProportionConsumed > 1.0333f) {
+        nRetarget = -2;
+    }
+
+    return nRetarget;
+}
+
+uint16_t CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params,
+                                   int64_t nTargetTimespan, bool isInterimDAA)
 {
     if (params.fPowNoRetargeting)
         return pindexLast->nBits;
 
+    // Use provided target timespan or default
+    if (nTargetTimespan == 0) {
+        nTargetTimespan = params.nPowTargetTimespan;
+    }
+
     // Compute constants
     const int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
-    const double nPeriodTimeProportionConsumed = (double)nActualTimespan / (double)params.nPowTargetTimespan;
-    const bool isHardDiffRemoved = DeploymentActiveAfter(pindexLast, params, Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL);
+    const double nPeriodTimeProportionConsumed = (double)nActualTimespan / (double)nTargetTimespan;
 
-    //Variable to set difficulty delta
-    int32_t nRetarget = CalculateDifficultyDelta(pindexLast->nBits, nPeriodTimeProportionConsumed, isHardDiffRemoved);
+    int32_t nRetarget;
+    if (isInterimDAA) {
+        // Use interim DAA algorithm
+        nRetarget = CalculateInterimDifficultyDelta(pindexLast->nBits, nPeriodTimeProportionConsumed);
+    } else {
+        // Use standard algorithm (with HARD_DIFF_REMOVAL check)
+        const bool isHardDiffRemoved = DeploymentActiveAfter(pindexLast, params, Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL);
+        nRetarget = CalculateDifficultyDelta(pindexLast->nBits, nPeriodTimeProportionConsumed, isHardDiffRemoved);
+    }
 
     return (int32_t)pindexLast->nBits + nRetarget;
 }

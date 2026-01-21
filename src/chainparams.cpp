@@ -135,6 +135,15 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
 
+        // Interim DAA hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 1767225600LL;  // 2026-01-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nTimeout = 1784505600LL;  // 2026-07-20
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].min_activation_height = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
+
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
@@ -254,6 +263,15 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = (4 * consensus.nMinerConfirmationWindow);
+
+        // Interim DAA hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 1767225600LL;  // 2026-01-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].min_activation_height = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
 
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
@@ -418,6 +436,15 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
 
+        // Interim DAA hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 1767225600LL;  // 2026-01-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].min_activation_height = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
+
         vFixedSeeds.clear();
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
@@ -501,6 +528,15 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
         consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
+
+        // Interim DAA hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 1767225600LL;  // 2026-01-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].min_activation_height = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
 
         UpdateActivationParametersFromArgs(args);
 
