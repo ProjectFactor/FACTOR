@@ -732,9 +732,6 @@ class CBlockHeader:
         #address that here.
         self.wOffset = self.wOffset[0] if isinstance(self.wOffset, tuple) else self.wOffset
         
-        #Debuggin purposes
-        assert self.nBits <= 2048, "Expected nBits <= 2048 but received nBits="+str(self.nBits)
-        
         r = b""
         r += self.nP1.to_bytes(128, byteorder='little')
         r += ser_uint256(self.hashPrevBlock)

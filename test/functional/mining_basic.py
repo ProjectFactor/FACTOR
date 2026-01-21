@@ -30,6 +30,9 @@ from test_framework.util import (
 
 VERSIONBITS_TOP_BITS = 0x20000000
 VERSIONBITS_DEPLOYMENT_TESTDUMMY_BIT = 28
+VERSIONBITS_DEPLOYMENT_INTERIM_DAA_BIT = 25
+
+BLOCKS_TO_MINE = 31 + 24 # Define takes 32 blocks incl. genesis & vote lock in takes 24 blocks
 
 
 def assert_template(node, block, expect, rehash=True):
@@ -51,11 +54,11 @@ class MiningTest(BitcoinTestFramework):
 
     def mine_chain(self):
         self.log.info('Create some old blocks')
-        for t in range(TIME_GENESIS_BLOCK, TIME_GENESIS_BLOCK + 200 * 600, 600):
+        for t in range(TIME_GENESIS_BLOCK, TIME_GENESIS_BLOCK + BLOCKS_TO_MINE * 600, 600):
             self.nodes[0].setmocktime(t)
             self.nodes[0].generate(1)
         mining_info = self.nodes[0].getmininginfo()
-        assert_equal(mining_info['blocks'], 200)
+        assert_equal(mining_info['blocks'], BLOCKS_TO_MINE)
         assert_equal(mining_info['currentblocktx'], 0)
         assert_equal(mining_info['currentblockweight'], 4000)
 
@@ -81,12 +84,12 @@ class MiningTest(BitcoinTestFramework):
 
         self.log.info('getmininginfo')
         mining_info = node.getmininginfo()
-        assert_equal(mining_info['blocks'], 200)
+        assert_equal(mining_info['blocks'], BLOCKS_TO_MINE)
         assert_equal(mining_info['chain'], self.chain)
         assert 'currentblocktx' not in mining_info
         assert 'currentblockweight' not in mining_info
         assert_equal(mining_info['difficulty'], Decimal('32'))
-        assert_equal(mining_info['networkhashps'], Decimal('0.003333333333333334'))
+        assert_equal(mining_info['networkhashps'], Decimal('4.021450617283951'))
         assert_equal(mining_info['pooledtx'], 0)
 
         # Mine a block to leave initial block download
@@ -106,9 +109,10 @@ class MiningTest(BitcoinTestFramework):
         block.nVersion = tmpl["version"]
         block.hashPrevBlock = int(tmpl["previousblockhash"], 16)
         block.nTime = tmpl["curtime"]
-        block.nBits = int(tmpl["bits"], 16)
+        block.nBits = tmpl["bits"]
         block.nNonce = 0
         block.vtx = [coinbase_tx]
+        block.solve()
 
         self.log.info("getblocktemplate: segwit rule must be set")
         assert_raises_rpc_error(-8, "getblocktemplate must be called with the segwit rule set", node.getblocktemplate)
@@ -170,7 +174,7 @@ class MiningTest(BitcoinTestFramework):
 
         self.log.info("getblocktemplate: Test bad bits")
         bad_block = copy.deepcopy(block)
-        bad_block.nBits = 469762303  # impossible in the real world
+        bad_block.nBits = 65535 # Above max (2048)
         assert_template(node, bad_block, 'bad-diffbits')
 
         self.log.info("getblocktemplate: Test bad merkle root")
@@ -203,7 +207,7 @@ class MiningTest(BitcoinTestFramework):
         block.solve()
 
         def chain_tip(b_hash, *, status='headers-only', branchlen=1):
-            return {'hash': b_hash, 'height': 202, 'branchlen': branchlen, 'status': status}
+            return {'hash': b_hash, 'height': BLOCKS_TO_MINE + 2, 'branchlen': branchlen, 'status': status}
 
         assert chain_tip(block.hash) not in node.getchaintips()
         node.submitheader(hexdata=block.serialize().hex())
