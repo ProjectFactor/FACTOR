@@ -23,13 +23,13 @@ enum BuriedDeployment : int16_t {
     DEPLOYMENT_CSV,
     DEPLOYMENT_SEGWIT,
     DEPLOYMENT_TAPROOT,
+    DEPLOYMENT_DEADPOOL,
+    DEPLOYMENT_HARD_DIFF_REMOVAL,
 };
-constexpr bool ValidDeployment(BuriedDeployment dep) { return dep <= DEPLOYMENT_TAPROOT; }
+constexpr bool ValidDeployment(BuriedDeployment dep) { return dep <= DEPLOYMENT_HARD_DIFF_REMOVAL; }
 
 enum DeploymentPos : uint16_t {
     DEPLOYMENT_TESTDUMMY,
-    DEPLOYMENT_DEADPOOL,
-    DEPLOYMENT_HARD_DIFF_REMOVAL,
     DEPLOYMENT_INTERIM_DAA,
     // NOTE: Also add new deployments to VersionBitsDeploymentInfo in deploymentinfo.cpp
     MAX_VERSION_BITS_DEPLOYMENTS
@@ -99,6 +99,10 @@ struct Params {
      * BIP 16 exception blocks. */
     int SegwitHeight;
     int TaprootHeight;
+    /** Block height at which Deadpool becomes active */
+    int DeadpoolHeight;
+    /** Block height at which Hard Diff Removal becomes active */
+    int HardDiffRemovalHeight;
     /** Don't warn about unknown BIP 9 activations below this height.
      * This prevents us from warning about the CSV and segwit activations. */
     int MinBIP9WarningHeight;
@@ -163,6 +167,10 @@ struct Params {
             return SegwitHeight;
         case DEPLOYMENT_TAPROOT:
             return TaprootHeight;
+        case DEPLOYMENT_DEADPOOL:
+            return DeadpoolHeight;
+        case DEPLOYMENT_HARD_DIFF_REMOVAL:
+            return HardDiffRemovalHeight;
         } // no default case, so the compiler can warn about missing cases
         return std::numeric_limits<int>::max();
     }

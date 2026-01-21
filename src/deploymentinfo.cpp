@@ -12,14 +12,6 @@ const struct VBDeploymentInfo VersionBitsDeploymentInfo[Consensus::MAX_VERSION_B
         /*.gbt_force =*/ true,
     },
     {
-        /*.name =*/ "deadpool",
-        /*.gbt_force =*/ true,
-    },
-    {
-        /*.name =*/ "hard_diff_removal",
-        /*.gbt_force =*/ true,
-    },
-    {
         /*.name =*/ "interim_daa",
         /*.gbt_force =*/ true,
     },
@@ -41,6 +33,10 @@ std::string DeploymentName(Consensus::BuriedDeployment dep)
         return "segwit";
     case Consensus::DEPLOYMENT_TAPROOT:
         return "taproot";
+    case Consensus::DEPLOYMENT_DEADPOOL:
+        return "deadpool";
+    case Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL:
+        return "hard_diff_removal";
     } // no default case, so the compiler can warn about missing cases
     return "";
 }

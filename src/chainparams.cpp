@@ -94,6 +94,8 @@ public:
         consensus.CSVHeight    = 1;
         consensus.SegwitHeight = 1;
         consensus.TaprootHeight = 1;
+        consensus.DeadpoolHeight = 157248;
+        consensus.HardDiffRemovalHeight = 168672;
         consensus.MinBIP9WarningHeight = 1; // segwit activation height + miner confirmation window
         consensus.powLimit = 230;
         consensus.nPowTargetTimespan = 14ULL * 24ULL * 60ULL * 60ULL; // 14 Days * 24 Hours * 60 Minutes * 60 Seconds |-> Seconds in 2 weeks.
@@ -118,22 +120,10 @@ public:
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
 
-        // Deadpool softfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].bit = 27;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nStartTime = 1735689600LL; // 2025-01-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nTimeout = 1748736000LL; // 2025-06-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].min_activation_height = 155000; // no delay
-
         // Deadpool parametrization
         consensus.nDeadpoolAnnounceMaturity = 100;
         consensus.nDeadpoolAnnounceValidity = 672;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
-
-        // Hard diff removal hardfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
 
         // Interim DAA hardfork
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
@@ -227,6 +217,8 @@ public:
         consensus.CSVHeight = 1;
         consensus.SegwitHeight = 1;
         consensus.TaprootHeight = 1;
+        consensus.DeadpoolHeight = 1;
+        consensus.HardDiffRemovalHeight = 1;
         consensus.MinBIP9WarningHeight = 1; // segwit activation height + miner confirmation window
         consensus.powLimit = 210;
         consensus.nPowTargetTimespan = 24 * 60 * 60; // two weeks
@@ -247,22 +239,10 @@ public:
         //Number of Miller-Rabin rounds, determines primality with false positive rate of 4^(-rounds).
         consensus.MillerRabinRounds = 50 ;
 
-        // Deadpool softfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].bit = 27;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nStartTime = 1735689600LL; // Jan 1st, 2025
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].min_activation_height = 0; // No activation delay
-
         // Deadpool parametrization
         consensus.nDeadpoolAnnounceMaturity = 5;
         consensus.nDeadpoolAnnounceValidity = 100;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
-
-        // Hard diff removal hardfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = (4 * consensus.nMinerConfirmationWindow);
 
         // Interim DAA hardfork
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
@@ -390,6 +370,8 @@ public:
         consensus.CSVHeight = 1;
         consensus.SegwitHeight = 1;
         consensus.TaprootHeight = 1;
+        consensus.DeadpoolHeight = 1;
+        consensus.HardDiffRemovalHeight = 1;
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 30 * 60;
         consensus.fPowAllowMinDifficultyBlocks = false;
@@ -419,22 +401,10 @@ public:
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
 
-        // Deadpool softfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].bit = 27;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nStartTime = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].min_activation_height = (4 * consensus.nMinerConfirmationWindow); // Add one more epoch than required
-
         // Deadpool parametrization
         consensus.nDeadpoolAnnounceMaturity = 5;
         consensus.nDeadpoolAnnounceValidity = 100;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
-
-        // Hard diff removal hardfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
 
         // Interim DAA hardfork
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
@@ -480,6 +450,8 @@ public:
         consensus.CSVHeight = 1;
         consensus.SegwitHeight = 1;
         consensus.TaprootHeight = 1;
+        consensus.DeadpoolHeight = 1;
+        consensus.HardDiffRemovalHeight = 1;
         consensus.MinBIP9WarningHeight = 0;
         consensus.powLimit = 32;
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
@@ -512,22 +484,10 @@ public:
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
 
-        // Deadpool softfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].bit = 27;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nStartTime = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].min_activation_height = (4 * consensus.nMinerConfirmationWindow); // Add one more epoch than required
-
         // Deadpool parametrization
         consensus.nDeadpoolAnnounceMaturity = 5;
         consensus.nDeadpoolAnnounceValidity = 100;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
-
-        // Hard diff removal hardfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
 
         // Interim DAA hardfork
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
