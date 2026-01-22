@@ -456,8 +456,8 @@ public:
         consensus.powLimit = 32;
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 30 * 60;
-        consensus.fPowAllowMinDifficultyBlocks = true;
-        consensus.fPowNoRetargeting = true;
+        consensus.fPowAllowMinDifficultyBlocks = false;
+        consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 24; // 75% for testchains
         consensus.nMinerConfirmationWindow = 32; // Faster than normal for regtest (32 instead of 2016)
 
@@ -491,7 +491,7 @@ public:
 
         // Interim DAA hardfork
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
-        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 1767225600LL;  // 2026-01-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].min_activation_height = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
