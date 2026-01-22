@@ -27,6 +27,7 @@ import math
 import random
 import socket
 import struct
+import subprocess
 import time
 
 from test_framework.siphash import siphash256
@@ -34,9 +35,6 @@ from test_framework.util import hex_str_to_bytes, assert_equal
 from test_framework.ghash import ghash_from_cblockheader
 
 import ctypes
-import random
-import sympy
-from sympy.ntheory import factorint
 from math import gcd
 
 MAX_LOCATOR_SZ = 101
@@ -842,6 +840,53 @@ class CBlock(CBlockHeader):
             return False
         return True
 
+    def factorint_with_coreutils(self, numbers: list[int]) -> dict[int, dict[int, int]]:
+        """
+        Factor integers using the coreutils `factor` binary with batching.
+
+        Args:
+            numbers: A list of integers to factor
+
+        Returns:
+            A dict mapping each input number to a dict of {prime: exponent}
+            (same format as sympy's factorint)
+        """
+        if not numbers:
+            return {}
+
+        # Convert to strings for command line
+        num_strs = [str(n) for n in numbers]
+
+        # Call factor with all numbers at once (batching)
+        result = subprocess.run(
+            ['factor'] + num_strs,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        # Parse output
+        # Format: "123: 3 41" or "828951931079: 506963 1635133"
+        results = {}
+        for line in result.stdout.strip().split('\n'):
+            if not line:
+                continue
+            parts = line.split(':', 1)
+            n = int(parts[0].strip())
+            factors_str = parts[1].strip()
+            if factors_str:
+                factor_list = [int(f) for f in factors_str.split()]
+            else:
+                factor_list = []
+
+            # Convert to dict with exponents (like sympy's factorint)
+            factor_dict = {}
+            for f in factor_list:
+                factor_dict[f] = factor_dict.get(f, 0) + 1
+            results[n] = factor_dict
+
+        return results
+
     def solve(self):
         #Debuggin purpose
         assert self.nBits >= 30, "nBits expected to be at least 30, but nBits=" + str(self.nBits)
@@ -866,10 +911,14 @@ class CBlock(CBlockHeader):
             #Get candidates to solve the block
             candidates =  [ n for n in range( W - 16*W.bit_length(), W + 16*W.bit_length()) if gcd(n, siev) == 1 ]
 
+            #Factor all candidates at once using coreutils factor binary
+            #This amortizes the cost of the factor binary call
+            all_factors = self.factorint_with_coreutils(candidates)
+
             #Sieve survivors for block solution
             for n in candidates:
-                #Factor candidate
-                factors = factorint(n)
+                #Get factors for this candidate
+                factors = all_factors[n]
 
                 #Factors Integer.
                 factorList = [ int(a) for a in factors ]
