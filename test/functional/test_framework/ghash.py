@@ -1,8 +1,24 @@
 import hashlib as phash
 import decimal
-from .crypto_extended import Whirlpool as whirl
 from math import floor
 from sympy import nextprime
+
+# Try to use python-whirlpool C extension for better performance
+try:
+    import whirlpool as _whirlpool_c
+    def whirl(data):
+        """Whirlpool hash using C extension.
+
+        Args:
+            data: String of characters (as used by pure Python implementation)
+        Returns:
+            Object with hexdigest() method
+        """
+        if isinstance(data, str):
+            data = bytes(ord(c) for c in data)
+        return _whirlpool_c.new(data)
+except ImportError:
+    from .crypto_extended import Whirlpool as whirl
 
 #Set precision to take square roots
 decimal.getcontext().prec = 2048
