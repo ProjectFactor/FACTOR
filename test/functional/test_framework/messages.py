@@ -883,7 +883,7 @@ class CBlock(CBlockHeader):
                     if ( factorList[0].bit_length() == factorList[1].bit_length()):
                         #Check they have the expected number of binary digits
                         if ( self.nBits//2 + ( self.nBits&1) == factorList[0].bit_length() ):
-                            print( factorList[0].bit_length(), factorList[1].bit_length() )
+                            # print( factorList[0].bit_length(), factorList[1].bit_length() )
 
                             #Update values for the found block
                             self.nP1     = factorList[0]
@@ -896,6 +896,7 @@ class CBlock(CBlockHeader):
                             #Update flag
                             DONE = True
 
+                            """
                             print("Python solved:")
                             print()
                             print("      nP1: ", self.nP1)
@@ -909,6 +910,7 @@ class CBlock(CBlockHeader):
                             print("        W: ", W )
                             print("BlockHash: ", self.hash, flush=True )
                             print("factor[0].bit_length() : ", factorList[0].bit_length() ) 
+                            """
 
 
                             #Exit inner loop
