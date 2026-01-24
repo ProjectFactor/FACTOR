@@ -146,7 +146,7 @@ class InterimDAATest(BitcoinTestFramework):
         return tmpl["bits"]
 
     # =========================================================================
-    # Phase 1: BIP9 State Machine Tests (blocks 0-335)
+    # Phase 1: BIP9 State Machine Tests
     # =========================================================================
 
     def test_defined_state(self, node, peer):
