@@ -74,8 +74,8 @@ struct BIP9Deployment {
 };
 
 /** Constants for interim DAA deployment */
-static constexpr int INTERIM_DAA_PERIOD = 84;
-static constexpr int INTERIM_DAA_THRESHOLD = 80;       // 95% of 84
+static constexpr int INTERIM_DAA_PERIOD = 42;
+static constexpr int INTERIM_DAA_THRESHOLD = 40;       // 95% of 42
 static constexpr int INTERIM_DAA_MAX_ACTIVE = 1344;    // 2 normal epochs
 
 /**
