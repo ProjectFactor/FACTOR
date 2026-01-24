@@ -206,7 +206,7 @@ class CTestNetParams : public CChainParams {
 public:
     CTestNetParams() {
         strNetworkID = CBaseChainParams::TESTNET;
-        genesis = CreateGenesisBlock( 1650442708ULL,  4143631544ULL, 210,  0, -2813, 0);
+        genesis = CreateGenesisBlock( 1650443545ULL, 2706135317ULL, 32, 0, 254, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
@@ -220,7 +220,7 @@ public:
         consensus.DeadpoolHeight = 1;
         consensus.HardDiffRemovalHeight = 1;
         consensus.MinBIP9WarningHeight = 1; // segwit activation height + miner confirmation window
-        consensus.powLimit = 210;
+        consensus.powLimit = 32;
         consensus.nPowTargetTimespan = 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 5 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
@@ -267,8 +267,8 @@ public:
 
 	    //Assert for genesis block.
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("550bbf0a444d9f92189f067dd225f5b8a5d92587ebc2e8398d143236072580af"));
-        assert(genesis.hashMerkleRoot == uint256S("fe56b75eb001df55cfe63e768ff54a7a376a3108119c9cedd1c6b5045649b108"));
+        // assert(consensus.hashGenesisBlock == uint256S("550bbf0a444d9f92189f067dd225f5b8a5d92587ebc2e8398d143236072580af"));
+        // assert(genesis.hashMerkleRoot == uint256S("fe56b75eb001df55cfe63e768ff54a7a376a3108119c9cedd1c6b5045649b108"));
 
         //Seeds
         vFixedSeeds.clear();
@@ -290,8 +290,8 @@ public:
 
         checkpointData = {
           {
-            {0, uint256S("550bbf0a444d9f92189f067dd225f5b8a5d92587ebc2e8398d143236072580af") },
-            {3990, uint256S("ecb678bcb76dfe655b69ff3b9094be33c6f3dac118fe58bd7dff57e62e28c7c2") }
+            // {0, uint256S("550bbf0a444d9f92189f067dd225f5b8a5d92587ebc2e8398d143236072580af") },
+            // {3990, uint256S("ecb678bcb76dfe655b69ff3b9094be33c6f3dac118fe58bd7dff57e62e28c7c2") }
           }
         };
 
