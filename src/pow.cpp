@@ -38,7 +38,7 @@ uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* 
     // Check if interim DAA is active
     const bool isInterimDAAActive = TimeLimitedDeploymentActive(pindexLast, params, Consensus::DEPLOYMENT_INTERIM_DAA);
 
-    // Use 84-block interval when interim DAA active, otherwise standard
+    // Use 42-block interval when interim DAA active, otherwise standard
     const int64_t adjustmentInterval = isInterimDAAActive
         ? Consensus::INTERIM_DAA_PERIOD
         : params.DifficultyAdjustmentInterval();
@@ -71,8 +71,9 @@ uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* 
     assert(pindexFirst);
 
     // Calculate target timespan based on active DAA
+    // Use (INTERIM_DAA_PERIOD - 1) because right now we don't know the time it took to mine the last block.
     const int64_t nTargetTimespan = isInterimDAAActive
-        ? (Consensus::INTERIM_DAA_PERIOD * params.nPowTargetSpacing)
+        ? ((Consensus::INTERIM_DAA_PERIOD - 1) * params.nPowTargetSpacing)
         : params.nPowTargetTimespan;
 
     return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params, nTargetTimespan, isInterimDAAActive);
