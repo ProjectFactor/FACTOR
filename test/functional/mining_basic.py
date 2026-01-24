@@ -63,6 +63,7 @@ class MiningTest(BitcoinTestFramework):
         assert_equal(mining_info['currentblockweight'], 4000)
 
         # This doesn't work anymore now that we set `fPowNoRetargeting = false` for DAA tests in feature_interim_daa.py.
+        # We're not fixing this since no other tests use -blockversion anyways
         # self.log.info('test blockversion')
         # self.restart_node(0, extra_args=['-mocktime={}'.format(t), '-blockversion=1337'])
         # self.connect_nodes(0, 1)

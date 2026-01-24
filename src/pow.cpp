@@ -168,21 +168,21 @@ int32_t CalculateInterimDifficultyDelta(const int32_t nBits, const double nPerio
     // Too fast, increase difficulty
     // 0.5 = 15min avg, 0.6667 ~= 20min avg, 0.9 = 27min avg for 30min target
     if (nPeriodTimeProportionConsumed < 0.5f) {
-        nRetarget = 6;
+        nRetarget += 6;
     } else if (nPeriodTimeProportionConsumed < 0.6667f) {
-        nRetarget = 4;
+        nRetarget += 4;
     } else if (nPeriodTimeProportionConsumed < 0.9f) {
-        nRetarget = 2;
+        nRetarget += 2;
     }
 
     // Too slow, decrease difficulty
     // 2.0 = 60min avg, 1.5 = 45min avg, 1.0333 ~= 31min avg for 30min target
     else if (nPeriodTimeProportionConsumed > 2.0f) {
-        nRetarget = -6;
+        nRetarget -= 6;
     } else if (nPeriodTimeProportionConsumed > 1.5f) {
-        nRetarget = -4;
+        nRetarget -= 4;
     } else if (nPeriodTimeProportionConsumed > 1.0333f) {
-        nRetarget = -2;
+        nRetarget -= 2;
     }
 
     return nRetarget;
