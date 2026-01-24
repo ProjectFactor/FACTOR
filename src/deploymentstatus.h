@@ -66,7 +66,7 @@ inline bool TimeLimitedDeploymentActive(const CBlockIndex* pindexPrev, const Con
 
     int activationHeight = g_versionbitscache.StateSinceHeight(pindexPrev, params, dep);
     int currentHeight = (pindexPrev == nullptr) ? 0 : pindexPrev->nHeight + 1;
-    return currentHeight <= activationHeight + maxActive;
+    return currentHeight < activationHeight + maxActive;
 }
 
 #endif // BITCOIN_DEPLOYMENTSTATUS_H
