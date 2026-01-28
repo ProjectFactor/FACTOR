@@ -52,4 +52,21 @@ inline bool DeploymentEnabled(const Consensus::Params& params, Consensus::Deploy
     return params.vDeployments[dep].nStartTime != Consensus::BIP9Deployment::NEVER_ACTIVE;
 }
 
+/** Check if a time-limited deployment is active */
+inline bool TimeLimitedDeploymentActive(const CBlockIndex* pindexPrev, const Consensus::Params& params, Consensus::DeploymentPos dep)
+{
+    if (!DeploymentActiveAfter(pindexPrev, params, dep)) {
+        return false;
+    }
+
+    int maxActive = params.vDeployments[dep].max_active_blocks;
+    if (maxActive <= 0) {
+        return true;
+    }
+
+    int activationHeight = g_versionbitscache.StateSinceHeight(pindexPrev, params, dep);
+    int currentHeight = (pindexPrev == nullptr) ? 0 : pindexPrev->nHeight + 1;
+    return currentHeight < activationHeight + maxActive;
+}
+
 #endif // BITCOIN_DEPLOYMENTSTATUS_H

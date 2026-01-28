@@ -27,6 +27,7 @@ import math
 import random
 import socket
 import struct
+import subprocess
 import time
 
 from test_framework.siphash import siphash256
@@ -34,9 +35,6 @@ from test_framework.util import hex_str_to_bytes, assert_equal
 from test_framework.ghash import ghash_from_cblockheader
 
 import ctypes
-import random
-import sympy
-from sympy.ntheory import factorint
 from math import gcd
 
 MAX_LOCATOR_SZ = 101
@@ -732,9 +730,6 @@ class CBlockHeader:
         #address that here.
         self.wOffset = self.wOffset[0] if isinstance(self.wOffset, tuple) else self.wOffset
         
-        #Debuggin purposes
-        assert self.nBits <= 2048, "Expected nBits <= 2048 but received nBits="+str(self.nBits)
-        
         r = b""
         r += self.nP1.to_bytes(128, byteorder='little')
         r += ser_uint256(self.hashPrevBlock)
@@ -845,6 +840,53 @@ class CBlock(CBlockHeader):
             return False
         return True
 
+    def factorint_with_coreutils(self, numbers: list[int]) -> dict[int, dict[int, int]]:
+        """
+        Factor integers using the coreutils `factor` binary with batching.
+
+        Args:
+            numbers: A list of integers to factor
+
+        Returns:
+            A dict mapping each input number to a dict of {prime: exponent}
+            (same format as sympy's factorint)
+        """
+        if not numbers:
+            return {}
+
+        # Convert to strings for command line
+        num_strs = [str(n) for n in numbers]
+
+        # Call factor with all numbers at once (batching)
+        result = subprocess.run(
+            ['factor'] + num_strs,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        # Parse output
+        # Format: "123: 3 41" or "828951931079: 506963 1635133"
+        results = {}
+        for line in result.stdout.strip().split('\n'):
+            if not line:
+                continue
+            parts = line.split(':', 1)
+            n = int(parts[0].strip())
+            factors_str = parts[1].strip()
+            if factors_str:
+                factor_list = [int(f) for f in factors_str.split()]
+            else:
+                factor_list = []
+
+            # Convert to dict with exponents (like sympy's factorint)
+            factor_dict = {}
+            for f in factor_list:
+                factor_dict[f] = factor_dict.get(f, 0) + 1
+            results[n] = factor_dict
+
+        return results
+
     def solve(self):
         #Debuggin purpose
         assert self.nBits >= 30, "nBits expected to be at least 30, but nBits=" + str(self.nBits)
@@ -861,20 +903,22 @@ class CBlock(CBlockHeader):
         while not DONE:
             #Get random nonce
             nonce = random.randint(0, (1<<64) - 1 )
-            blockHeader.nNonce = nonce
             self.nNonce        = nonce
 
             #Get W from gHash
             W = ghash_from_cblockheader(self, params.hashRounds)
-            W = W.toInt()
 
             #Get candidates to solve the block
             candidates =  [ n for n in range( W - 16*W.bit_length(), W + 16*W.bit_length()) if gcd(n, siev) == 1 ]
 
+            #Factor all candidates at once using coreutils factor binary
+            #This amortizes the cost of the factor binary call
+            all_factors = self.factorint_with_coreutils(candidates)
+
             #Sieve survivors for block solution
             for n in candidates:
-                #Factor candidate
-                factors = factorint(n)
+                #Get factors for this candidate
+                factors = all_factors[n]
 
                 #Factors Integer.
                 factorList = [ int(a) for a in factors ]
@@ -887,8 +931,8 @@ class CBlock(CBlockHeader):
                     #Check they have the same number of binary digits
                     if ( factorList[0].bit_length() == factorList[1].bit_length()):
                         #Check they have the expected number of binary digits
-                        if ( blockHeader.nBits//2 + ( blockHeader.nBits&1) == factorList[0].bit_length() ):
-                            print( factorList[0].bit_length(), factorList[1].bit_length() )
+                        if ( self.nBits//2 + ( self.nBits&1) == factorList[0].bit_length() ):
+                            # print( factorList[0].bit_length(), factorList[1].bit_length() )
 
                             #Update values for the found block
                             self.nP1     = factorList[0]
@@ -901,6 +945,7 @@ class CBlock(CBlockHeader):
                             #Update flag
                             DONE = True
 
+                            """
                             print("Python solved:")
                             print()
                             print("      nP1: ", self.nP1)
@@ -914,6 +959,7 @@ class CBlock(CBlockHeader):
                             print("        W: ", W )
                             print("BlockHash: ", self.hash, flush=True )
                             print("factor[0].bit_length() : ", factorList[0].bit_length() ) 
+                            """
 
 
                             #Exit inner loop

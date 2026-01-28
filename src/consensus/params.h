@@ -23,13 +23,14 @@ enum BuriedDeployment : int16_t {
     DEPLOYMENT_CSV,
     DEPLOYMENT_SEGWIT,
     DEPLOYMENT_TAPROOT,
+    DEPLOYMENT_DEADPOOL,
+    DEPLOYMENT_HARD_DIFF_REMOVAL,
 };
-constexpr bool ValidDeployment(BuriedDeployment dep) { return dep <= DEPLOYMENT_TAPROOT; }
+constexpr bool ValidDeployment(BuriedDeployment dep) { return dep <= DEPLOYMENT_HARD_DIFF_REMOVAL; }
 
 enum DeploymentPos : uint16_t {
     DEPLOYMENT_TESTDUMMY,
-    DEPLOYMENT_DEADPOOL,
-    DEPLOYMENT_HARD_DIFF_REMOVAL,
+    DEPLOYMENT_INTERIM_DAA,
     // NOTE: Also add new deployments to VersionBitsDeploymentInfo in deploymentinfo.cpp
     MAX_VERSION_BITS_DEPLOYMENTS
 };
@@ -50,6 +51,12 @@ struct BIP9Deployment {
      *  boundary.
      */
     int min_activation_height{0};
+    /** Per-deployment voting period override. 0 = use global nMinerConfirmationWindow */
+    int nPeriod{0};
+    /** Per-deployment threshold override. 0 = use global nRuleChangeActivationThreshold */
+    int nThreshold{0};
+    /** Auto-deactivate after this many blocks post-activation. 0 = permanent */
+    int max_active_blocks{0};
 
     /** Constant for nTimeout very far in the future. */
     static constexpr int64_t NO_TIMEOUT = std::numeric_limits<int64_t>::max();
@@ -65,6 +72,11 @@ struct BIP9Deployment {
      *  prior to deploying it on some or all networks. */
     static constexpr int64_t NEVER_ACTIVE = -2;
 };
+
+/** Constants for interim DAA deployment */
+static constexpr int INTERIM_DAA_PERIOD = 42;
+static constexpr int INTERIM_DAA_THRESHOLD = 40;       // 95% of 42
+static constexpr int INTERIM_DAA_MAX_ACTIVE = 1344;    // 2 normal epochs
 
 /**
  * Parameters that influence chain consensus.
@@ -87,6 +99,10 @@ struct Params {
      * BIP 16 exception blocks. */
     int SegwitHeight;
     int TaprootHeight;
+    /** Block height at which Deadpool becomes active */
+    int DeadpoolHeight;
+    /** Block height at which Hard Diff Removal becomes active */
+    int HardDiffRemovalHeight;
     /** Don't warn about unknown BIP 9 activations below this height.
      * This prevents us from warning about the CSV and segwit activations. */
     int MinBIP9WarningHeight;
@@ -151,6 +167,10 @@ struct Params {
             return SegwitHeight;
         case DEPLOYMENT_TAPROOT:
             return TaprootHeight;
+        case DEPLOYMENT_DEADPOOL:
+            return DeadpoolHeight;
+        case DEPLOYMENT_HARD_DIFF_REMOVAL:
+            return HardDiffRemovalHeight;
         } // no default case, so the compiler can warn about missing cases
         return std::numeric_limits<int>::max();
     }

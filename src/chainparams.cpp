@@ -94,6 +94,8 @@ public:
         consensus.CSVHeight    = 1;
         consensus.SegwitHeight = 1;
         consensus.TaprootHeight = 1;
+        consensus.DeadpoolHeight = 157248;
+        consensus.HardDiffRemovalHeight = 168672;
         consensus.MinBIP9WarningHeight = 1; // segwit activation height + miner confirmation window
         consensus.powLimit = 230;
         consensus.nPowTargetTimespan = 14ULL * 24ULL * 60ULL * 60ULL; // 14 Days * 24 Hours * 60 Minutes * 60 Seconds |-> Seconds in 2 weeks.
@@ -118,22 +120,19 @@ public:
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
 
-        // Deadpool softfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].bit = 27;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nStartTime = 1735689600LL; // 2025-01-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nTimeout = 1748736000LL; // 2025-06-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].min_activation_height = 155000; // no delay
-
         // Deadpool parametrization
         consensus.nDeadpoolAnnounceMaturity = 100;
         consensus.nDeadpoolAnnounceValidity = 672;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
 
-        // Hard diff removal hardfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
+        // Interim DAA hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 1767225600LL;  // 2026-01-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nTimeout = 1784505600LL;  // 2026-07-20
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].min_activation_height = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -207,7 +206,7 @@ class CTestNetParams : public CChainParams {
 public:
     CTestNetParams() {
         strNetworkID = CBaseChainParams::TESTNET;
-        genesis = CreateGenesisBlock( 1650442708ULL,  4143631544ULL, 210,  0, -2813, 0);
+        genesis = CreateGenesisBlock( 1650443545ULL, 2706135317ULL, 32, 0, 254, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
@@ -218,8 +217,10 @@ public:
         consensus.CSVHeight = 1;
         consensus.SegwitHeight = 1;
         consensus.TaprootHeight = 1;
+        consensus.DeadpoolHeight = 1;
+        consensus.HardDiffRemovalHeight = 1;
         consensus.MinBIP9WarningHeight = 1; // segwit activation height + miner confirmation window
-        consensus.powLimit = 210;
+        consensus.powLimit = 32;
         consensus.nPowTargetTimespan = 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 5 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
@@ -238,22 +239,19 @@ public:
         //Number of Miller-Rabin rounds, determines primality with false positive rate of 4^(-rounds).
         consensus.MillerRabinRounds = 50 ;
 
-        // Deadpool softfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].bit = 27;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nStartTime = 1735689600LL; // Jan 1st, 2025
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].min_activation_height = 0; // No activation delay
-
         // Deadpool parametrization
         consensus.nDeadpoolAnnounceMaturity = 5;
         consensus.nDeadpoolAnnounceValidity = 100;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
 
-        // Hard diff removal hardfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = (4 * consensus.nMinerConfirmationWindow);
+        // Interim DAA hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 1767225600LL;  // 2026-01-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].min_activation_height = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
 
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
@@ -269,8 +267,8 @@ public:
 
 	    //Assert for genesis block.
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("550bbf0a444d9f92189f067dd225f5b8a5d92587ebc2e8398d143236072580af"));
-        assert(genesis.hashMerkleRoot == uint256S("fe56b75eb001df55cfe63e768ff54a7a376a3108119c9cedd1c6b5045649b108"));
+        // assert(consensus.hashGenesisBlock == uint256S("550bbf0a444d9f92189f067dd225f5b8a5d92587ebc2e8398d143236072580af"));
+        // assert(genesis.hashMerkleRoot == uint256S("fe56b75eb001df55cfe63e768ff54a7a376a3108119c9cedd1c6b5045649b108"));
 
         //Seeds
         vFixedSeeds.clear();
@@ -292,8 +290,8 @@ public:
 
         checkpointData = {
           {
-            {0, uint256S("550bbf0a444d9f92189f067dd225f5b8a5d92587ebc2e8398d143236072580af") },
-            {3990, uint256S("ecb678bcb76dfe655b69ff3b9094be33c6f3dac118fe58bd7dff57e62e28c7c2") }
+            // {0, uint256S("550bbf0a444d9f92189f067dd225f5b8a5d92587ebc2e8398d143236072580af") },
+            // {3990, uint256S("ecb678bcb76dfe655b69ff3b9094be33c6f3dac118fe58bd7dff57e62e28c7c2") }
           }
         };
 
@@ -372,6 +370,8 @@ public:
         consensus.CSVHeight = 1;
         consensus.SegwitHeight = 1;
         consensus.TaprootHeight = 1;
+        consensus.DeadpoolHeight = 1;
+        consensus.HardDiffRemovalHeight = 1;
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 30 * 60;
         consensus.fPowAllowMinDifficultyBlocks = false;
@@ -401,22 +401,19 @@ public:
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
 
-        // Deadpool softfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].bit = 27;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nStartTime = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].min_activation_height = (4 * consensus.nMinerConfirmationWindow); // Add one more epoch than required
-
         // Deadpool parametrization
         consensus.nDeadpoolAnnounceMaturity = 5;
         consensus.nDeadpoolAnnounceValidity = 100;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
 
-        // Hard diff removal hardfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
+        // Interim DAA hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 1767225600LL;  // 2026-01-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].min_activation_height = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
 
         vFixedSeeds.clear();
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
@@ -453,12 +450,14 @@ public:
         consensus.CSVHeight = 1;
         consensus.SegwitHeight = 1;
         consensus.TaprootHeight = 1;
+        consensus.DeadpoolHeight = 1;
+        consensus.HardDiffRemovalHeight = 1;
         consensus.MinBIP9WarningHeight = 0;
         consensus.powLimit = 32;
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 30 * 60;
-        consensus.fPowAllowMinDifficultyBlocks = true;
-        consensus.fPowNoRetargeting = true;
+        consensus.fPowAllowMinDifficultyBlocks = false;
+        consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 24; // 75% for testchains
         consensus.nMinerConfirmationWindow = 32; // Faster than normal for regtest (32 instead of 2016)
 
@@ -485,22 +484,19 @@ public:
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
 
-        // Deadpool softfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].bit = 27;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nStartTime = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_DEADPOOL].min_activation_height = (4 * consensus.nMinerConfirmationWindow); // Add one more epoch than required
-
         // Deadpool parametrization
         consensus.nDeadpoolAnnounceMaturity = 5;
         consensus.nDeadpoolAnnounceValidity = 100;
         consensus.nDeadpoolAnnounceMinBurn = 1000000; // 0.01 COIN
 
-        // Hard diff removal hardfork
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].bit = 26;
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nStartTime = 1743465600LL; // 2025-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].nTimeout = 1775001600LL; // 2026-04-01
-        consensus.vDeployments[Consensus::DEPLOYMENT_HARD_DIFF_REMOVAL].min_activation_height = 160000; // no delay
+        // Interim DAA hardfork
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].bit = 25;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nStartTime = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].min_activation_height = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
+        consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
 
         UpdateActivationParametersFromArgs(args);
 

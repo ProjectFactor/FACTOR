@@ -1,26 +1,42 @@
 import hashlib as phash
 import decimal
-from .crypto_extended import Whirlpool as whirl
 from math import floor
 from sympy import nextprime
+
+# Try to use python-whirlpool C extension for better performance
+try:
+    import whirlpool as _whirlpool_c
+    def whirl(data):
+        """Whirlpool hash using C extension.
+
+        Args:
+            data: String of characters (as used by pure Python implementation)
+        Returns:
+            Object with hexdigest() method
+        """
+        if isinstance(data, str):
+            data = bytes(ord(c) for c in data)
+        return _whirlpool_c.new(data)
+except ImportError:
+    from .crypto_extended import Whirlpool as whirl
 
 #Set precision to take square roots
 decimal.getcontext().prec = 2048
 
 def ghash_from_cblockheader(header, rounds: int) -> int:
-    hashPrevBlock = header.hashPrevBlock.to_bytes(32, byteorder='big')
-    hashMerkleRoot = header.hashMerkleRoot.to_bytes(32, byteorder='big')
-    nNonce = header.nNonce.to_bytes(8, byteorder='big')
-    nTime = header.nTime.to_bytes(4, byteorder='big')
-    nVersion = header.nVersion.to_bytes(4, byteorder='big')
-    nBits = header.nBits.to_bytes(2, byteorder='big')
+    hashPrevBlock = header.hashPrevBlock.to_bytes(32, byteorder='little')
+    hashMerkleRoot = header.hashMerkleRoot.to_bytes(32, byteorder='little')
+    nNonce = header.nNonce.to_bytes(8, byteorder='little')
+    nTime = header.nTime.to_bytes(4, byteorder='little')
+    nVersion = header.nVersion.to_bytes(4, byteorder='little')
+    nBits = header.nBits.to_bytes(2, byteorder='little')
 
     passwd = hashPrevBlock + hashMerkleRoot + nNonce
-    salt = nTime + nVersion + nBits
+    salt = nVersion + nBits + nTime
 
-    return ghash_internal(rounds, passw, salt)
+    return ghash_internal(rounds, passwd, salt, header.nBits)
 
-def ghash_internal(rounds, passw, salt) -> int:
+def ghash_internal(rounds, passwd, salt, nBits: int) -> int:
 
     # ////////////////////////////////////////////////////////////////////////////////
     # //                                Scrypt parameters                           //
@@ -42,7 +58,7 @@ def ghash_internal(rounds, passw, salt) -> int:
 
     #Scrypt Hash to 2048-bits hash.
     #Docs:  hashlib.scrypt(password, *, salt, n, r, p, maxmem=0, dklen=64)
-    derived = phash.scrypt( passw, salt=salt, n=N, r=r, p=p, dklen=256)
+    derived = phash.scrypt( passwd, salt=salt, n=N, r=r, p=p, dklen=256)
 
     #Prepare GMP objects
     prime_mpz, starting_number_mpz, a_mpz, a_inverse_mpz = 0,0,0,0
@@ -123,7 +139,7 @@ def ghash_internal(rounds, passw, salt) -> int:
                 derived = derived[:112] + derived_temp + derived[176:]
 
     w = 0
-    w = int.from_bytes( derived, byteorder="little"  )| (1 << (int(header['bits'] - 1) ))
-    w = w & ( (1 << int(header['bits'])) - 1 )
+    w = int.from_bytes( derived, byteorder="little"  )| (1 << (int(nBits - 1) ))
+    w = w & ( (1 << int(nBits)) - 1 )
 
     return w

@@ -51,7 +51,7 @@ MAX_BLOCK_SIGOPS = 20000
 MAX_BLOCK_SIGOPS_WEIGHT = MAX_BLOCK_SIGOPS * WITNESS_SCALE_FACTOR
 
 # Genesis block time (regtest)
-TIME_GENESIS_BLOCK = 1645682572
+TIME_GENESIS_BLOCK = 1650443545
 
 # Coinbase transaction outputs can only be spent after this number of new blocks (network rule)
 COINBASE_MATURITY = 100
@@ -62,15 +62,17 @@ WITNESS_COMMITMENT_HEADER = b"\xaa\x21\xa9\xed"
 NORMAL_GBT_REQUEST_PARAMS = {"rules": ["segwit"]}
 
 
-def create_block(hashprev=None, coinbase=None, ntime=None, *, version=None, tmpl=None, txlist=None, nBits = 32):
-    """Create a block (with regtest difficulty)."""
+def create_block(hashprev=None, coinbase=None, ntime=None, *, version=None, tmpl=None, txlist=None, nBits=None):
     block = CBlock()
     if tmpl is None:
         tmpl = {}
     block.nVersion = version or tmpl.get('version') or 1
     block.nTime = ntime or tmpl.get('curtime') or int(time.time() + 600)
     block.hashPrevBlock = hashprev or int(tmpl['previousblockhash'], 0x10)
-    block.nBits = nBits  # difficulty retargeting is disabled in REGTEST chainparams
+    if nBits is not None:
+        block.nBits = nBits
+    else:
+        block.nBits = tmpl.get('bits', 32)
     
     if coinbase is None:
         coinbase = create_coinbase(height=tmpl['height'], nBits = block.nBits )
@@ -137,7 +139,7 @@ def create_coinbase(height, pubkey=None, extra_output_script=None, fees=0, nValu
             coinbaseoutput.nValue = nValue
     else:
         coinbaseoutput.nValue = floor(22357200*pow(2, (nBits>>1)/32 - 1)) | 1023
-    print("Python GetBlockSubsidy: ", coinbaseoutput.nValue )
+    # print("Python GetBlockSubsidy: ", coinbaseoutput.nValue )
 
     if pubkey is not None:
         coinbaseoutput.scriptPubKey = CScript([pubkey, OP_CHECKSIG])
