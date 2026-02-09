@@ -97,10 +97,10 @@ public:
 
     std::string GetDec() const {
       size_t decsz = mpz_sizeinbase(m_value, 10);
-      if (decsz > 1023) {
+      if (decsz > 4095) {
           return "unprintable number";
       }
-      char dec_cstr[1024];
+      char dec_cstr[4096];
       gmp_snprintf(dec_cstr, decsz + 1, "%Zd", m_value);
       return dec_cstr;
     }
