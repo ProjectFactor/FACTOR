@@ -79,7 +79,7 @@ std::shared_ptr<CBlock> PrepareBlock(const NodeContext& node, const CScript& coi
             ->block);
 
     LOCK(cs_main);
-    block->nTime = Assert(node.chainman)->ActiveChain().Tip()->GetMedianTimePast() + 1;
+    block->nTime = Assert(node.chainman)->ActiveChain().Tip()->GetBlockTime() + 1;
     block->hashMerkleRoot = BlockMerkleRoot(*block);
 
     return block;

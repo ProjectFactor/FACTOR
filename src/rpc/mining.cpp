@@ -1019,7 +1019,7 @@ static RPCHelpMan getblocktemplate()
     result.pushKV("coinbasevalue", (int64_t)pblock->vtx[0]->vout[0].nValue);
     result.pushKV("longpollid", active_chain.Tip()->GetBlockHash().GetHex() + ToString(nTransactionsUpdatedLast));
     result.pushKV("target", GetNextWorkRequired(pindexPrev, pblock, consensusParams ) );
-    result.pushKV("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1);
+    result.pushKV("mintime", (int64_t)pindexPrev->GetBlockTime()+1);
     result.pushKV("mutable", aMutable);
     result.pushKV("noncerange", "[-2^64, 2^64-1]");
     int64_t nSigOpLimit = MAX_BLOCK_SIGOPS_COST;
