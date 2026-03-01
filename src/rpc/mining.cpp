@@ -23,6 +23,7 @@
 #include <rpc/mining.h>
 #include <rpc/net.h>
 #include <rpc/server.h>
+#include <timedata.h>
 #include <rpc/util.h>
 #include <script/descriptor.h>
 #include <script/script.h>
@@ -710,6 +711,7 @@ static RPCHelpMan getblocktemplate()
                 {RPCResult::Type::NUM, "sizelimit", "limit of block size"},
                 {RPCResult::Type::NUM, "weightlimit", "limit of block weight"},
                 {RPCResult::Type::NUM_TIME, "curtime", "current timestamp in " + UNIX_EPOCH_TIME},
+                {RPCResult::Type::NUM_TIME, "maxtime", "maximum allowed timestamp for the next block in " + UNIX_EPOCH_TIME},
                 {RPCResult::Type::STR, "bits", "Bitsize to factor for this block."},
                 {RPCResult::Type::NUM, "height", "The height of the next block"},
                 {RPCResult::Type::STR, "default_witness_commitment", /* optional */ true, "a valid witness commitment for the unmodified block template"},
@@ -1036,6 +1038,7 @@ static RPCHelpMan getblocktemplate()
         result.pushKV("weightlimit", (int64_t)MAX_BLOCK_WEIGHT);
     }
     result.pushKV("curtime", pblock->GetBlockTime());
+    result.pushKV("maxtime", (int64_t)(GetAdjustedTime() + MAX_FUTURE_BLOCK_TIME));
     result.pushKV("bits",  pblock->nBits);
     result.pushKV("height", (int64_t)(pindexPrev->nHeight+1));
 
