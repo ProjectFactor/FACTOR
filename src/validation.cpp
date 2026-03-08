@@ -4342,6 +4342,7 @@ void UnloadBlockIndex(CTxMemPool* mempool, ChainstateManager& chainman)
     chainman.Unload();
     pindexBestInvalid = nullptr;
     pindexBestHeader = nullptr;
+    ResetASERTAnchorBlockCache();
     if (mempool) mempool->clear();
     vinfoBlockFile.clear();
     nLastBlockFile = 0;

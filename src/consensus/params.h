@@ -119,6 +119,8 @@ struct Params {
     bool fPowAllowMinDifficultyBlocks;
     bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
+    int64_t nASERTHalfLife;
+    int64_t asertActivationTime;
     int64_t nPowTargetTimespan;
     double maxLilt; // The extrema of timespan deviation
     int32_t maxRetargetDelta; // The extrema of the retargeting delta
