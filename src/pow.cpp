@@ -242,8 +242,14 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
         mpz_sub_ui(n, W, abs_offset);
     }
 
-    LogPrint(BCLog::POW, "  W: %s\n", mpz_get_str(NULL, 10, W));
-    LogPrint(BCLog::POW, "  N: %s\n", mpz_get_str(NULL, 10, n));
+    {
+        char *w_str = mpz_get_str(NULL, 10, W);
+        char *n_str = mpz_get_str(NULL, 10, n);
+        LogPrint(BCLog::POW, "  W: %s\n", w_str);
+        LogPrint(BCLog::POW, "  N: %s\n", n_str);
+        free(w_str);
+        free(n_str);
+    }
 
     //Clear memory for W.
     mpz_clear(W);
@@ -262,8 +268,14 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
     mpz_import(nP1, 16, -1, 8, 0, 0, block.nP1.u64_begin());
     mpz_tdiv_q(nP2, n, nP1);
 
-    LogPrint(BCLog::POW, "nP1: %s\n", mpz_get_str(NULL, 10, nP1));
-    LogPrint(BCLog::POW, "nP2: %s\n", mpz_get_str(NULL, 10, nP2));
+    {
+        char *p1_str = mpz_get_str(NULL, 10, nP1);
+        char *p2_str = mpz_get_str(NULL, 10, nP2);
+        LogPrint(BCLog::POW, "nP1: %s\n", p1_str);
+        LogPrint(BCLog::POW, "nP2: %s\n", p2_str);
+        free(p1_str);
+        free(p2_str);
+    }
 
     //Check the bitsizes are as expected
     const uint16_t nP1_bitsize = mpz_sizeinbase(nP1, 2);
@@ -284,7 +296,13 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
 
     //Check that nP1*nP2 == n.
     if (mpz_cmp(n_check, n) != 0) {
-        LogPrintf("pow error: nP1 does not divide N.  N=%s nP1=%s\n", mpz_get_str(NULL, 10, n), mpz_get_str(NULL, 10, nP1));
+        {
+            char *n_str = mpz_get_str(NULL, 10, n);
+            char *p1_str = mpz_get_str(NULL, 10, nP1);
+            LogPrintf("pow error: nP1 does not divide N.  N=%s nP1=%s\n", n_str, p1_str);
+            free(n_str);
+            free(p1_str);
+        }
         mpz_clear(n);
         mpz_clear(nP1);
         mpz_clear(nP2);
@@ -294,7 +312,13 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
 
     //Check that nP1 <= nP2.
     if (mpz_cmp(nP1, nP2) > 0) {
-        LogPrintf("pow error: nP1 must be the smallest factor. N=%s nP1=%s\n", mpz_get_str(NULL, 10, n), mpz_get_str(NULL, 10, nP1));
+        {
+            char *n_str = mpz_get_str(NULL, 10, n);
+            char *p1_str = mpz_get_str(NULL, 10, nP1);
+            LogPrintf("pow error: nP1 must be the smallest factor. N=%s nP1=%s\n", n_str, p1_str);
+            free(n_str);
+            free(p1_str);
+        }
         mpz_clear(n);
         mpz_clear(nP1);
         mpz_clear(nP2);
@@ -472,7 +496,10 @@ uint1024 gHash(const CBlockHeader& block, const Consensus::Params& params)
 
         //Branch away
         for (int jj = 0; jj < irounds; jj++) {
-            const int32_t br = popcnt(derived.data(), sizeof(derived.data()));
+            // sizeof(derived.data()) was sizeof(pointer), not the buffer size.
+            // On 64-bit this evaluated to 8, which is now the consensus value.
+            // Hardcode 8 so a 32-bit build doesn't fork from the network.
+            const int32_t br = popcnt(derived.data(), 8);
 
             //Power mod
             mpz_powm_ui(a_inverse_mpz, a_inverse_mpz, irounds, prime_mpz);
