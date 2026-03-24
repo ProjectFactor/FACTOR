@@ -218,6 +218,11 @@ uint16_t CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirst
 
 bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params)
 {
+    if (block.nBits == 0 || block.nBits > 1023) {
+        LogPrintf("PoW error: nBits %d out of valid range [1, 1023]\n", block.nBits);
+        return false;
+    }
+
     //First, generate the random seed submited for this block
     uint1024 w = gHash(block, params);
 
@@ -266,6 +271,15 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
     mpz_init(nP1);
     mpz_init(nP2);
     mpz_import(nP1, 16, -1, 8, 0, 0, block.nP1.u64_begin());
+
+    if (mpz_sgn(nP1) == 0) {
+        LogPrintf("PoW error: nP1 is zero\n");
+        mpz_clear(n);
+        mpz_clear(nP1);
+        mpz_clear(nP2);
+        return false;
+    }
+
     mpz_tdiv_q(nP2, n, nP1);
 
     {
