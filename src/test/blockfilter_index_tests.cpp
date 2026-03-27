@@ -98,6 +98,7 @@ bool BuildChainTestingSetup::BuildChain(const CBlockIndex* pindex,
         if (!Assert(m_node.chainman)->ProcessNewBlockHeaders({header}, state, Params(), &pindex)) {
             return false;
         }
+        SetMockTime(GetTime() + 1);
     }
 
     return true;
