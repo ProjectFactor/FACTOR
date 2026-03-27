@@ -12,23 +12,28 @@
 // The vectors are intended to validate implementations of the same
 // integer ASERT algorithm in other languages against the C++ implementation.
 //
-// This program needs to be compiled and linked against pre-built BCHN
-// libraries and sources. There should be some build instructions
-// in the same folder as this program's source.
+// This program needs to be compiled and linked against FACTOR's libraries.
+// Build with: make -C src contrib/testgen/gen_asert_test_vectors
 
-#include <chain.h>
-#include <chainparams.h>
-#include <config.h>
+#include <arith_uint256.h>
 #include <pow.h>
-#include <util/system.h>
 
+#include <cassert>
 #include <cinttypes>
 #include <cstdio>
 #include <functional>
 #include <random>
+#include <string>
 
-/** No-op translate strings, because having problems getting _() defined for linker */
-const std::function<std::string(const char *)> G_TRANSLATION_FUN = [](const char *psz) -> std::string { return psz; };
+// Required by the linker (referenced via util/translation.h)
+const std::function<std::string(const char *)> G_TRANSLATION_FUN = nullptr;
+
+// BCH-compatible ASERT parameters for reference test vector generation.
+// Using BCH mainnet values so output can be validated against BCH's known-good
+// QA reference vectors, proving our CalculateASERT() implementation is correct.
+// FACTOR's actual deployment uses nPowTargetSpacing=1800 (30 min).
+static constexpr int64_t ASERT_POW_TARGET_SPACING = 600;      // 10 min (BCH mainnet)
+static constexpr int64_t ASERT_HALF_LIFE = 2 * 24 * 60 * 60;  // 2 days (same as FACTOR)
 
 // The vectors are produced in "runs" which iterate a number of blocks,
 // based on some reference block parameters, a start height + increment,
@@ -58,17 +63,17 @@ uint64_t height_incr_by_288(uint64_t) {
     return 288;
 }
 
-int64_t time_incr_by_600s(uint64_t) {
-    return 600;
+int64_t time_incr_by_target_spacing(uint64_t) {
+    return ASERT_POW_TARGET_SPACING;
 }
 
 int64_t time_incr_by_extra_halflife(uint64_t) {
-    // This adds another 600s because the extra halflife
+    // This adds another target spacing because the extra halflife
     // is supposed to be relative to the height of each
     // block, and we are aiming for a nice doubling of
     // the target in the only run that uses this increment
     // function.
-    return 600 + 2*24*3600;
+    return ASERT_POW_TARGET_SPACING + ASERT_HALF_LIFE;
 }
 
 // stable hashrate, solvetime is exponentially distributed
@@ -107,9 +112,8 @@ void print_run_iteration(const uint64_t iteration,
 }
 
 // Perform one parameterized run to produce ASERT test vectors.
-void perform_run(const run_params& r_params, const Consensus::Params& chainparams) {
+void perform_run(const run_params& r_params, const arith_uint256& powLimit) {
     assert(r_params.start_height >= r_params.anchor_height);
-    const arith_uint256 powLimit = UintToArith256(chainparams.powLimit);
     const arith_uint256 refTarget = arith_uint256().SetCompact(r_params.anchor_nbits);
     const uint32_t check_nbits = refTarget.GetCompact();
     assert(check_nbits == r_params.anchor_nbits);
@@ -129,11 +133,11 @@ void perform_run(const run_params& r_params, const Consensus::Params& chainparam
         uint32_t nextBits;
 
         nextTarget = CalculateASERT(refTarget,
-                                    chainparams.nPowTargetSpacing,
+                                    ASERT_POW_TARGET_SPACING,
                                     t - r_params.anchor_time,    // time diff to reference
                                     h - r_params.anchor_height,  // height diff to reference
                                     powLimit,
-                                    chainparams.nASERTHalfLife);
+                                    ASERT_HALF_LIFE);
 
         // Calculate the bits from target
         nextBits = nextTarget.GetCompact();
@@ -155,9 +159,9 @@ void perform_run(const run_params& r_params, const Consensus::Params& chainparam
 
 // Produce test vectors for ASERT.
 void produce_asert_test_vectors() {
-    DummyConfig config(CBaseChainParams::MAIN);
-    const Consensus::Params &chainparams = config.GetChainParams().GetConsensus();
-    const arith_uint256 powLimit = UintToArith256(chainparams.powLimit);
+    // BCH mainnet powLimit: 0x00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    // Using SetCompact(0x1d00ffff) reproduces this standard Bitcoin/BCH powLimit.
+    const arith_uint256 powLimit = arith_uint256().SetCompact(0x1d00ffff);
     uint32_t powLimit_nBits = powLimit.GetCompact();
 
     // Table of runs used to produce the test vectors.
@@ -169,16 +173,16 @@ void produce_asert_test_vectors() {
         // otherwise cannot be used as function pointer:
         //    [](uint64_t) { return int64_t(600+172800); }
 
-        { "run1 - steady 600s blocks at POW limit target",
-            powLimit_nBits, 1ULL, 0ULL, 2ULL, 1200ULL, 10ULL, height_incr_by_one, time_incr_by_600s
+        { "run1 - steady target_spacing blocks at POW limit target",
+            powLimit_nBits, 1ULL, 0ULL, 2ULL, 1200ULL, 10ULL, height_incr_by_one, time_incr_by_target_spacing
         },
 
-        { "run2 - steady 600s blocks at arbitrary non-limit target 0x1a2b3c4d",
-            0x1a2b3c4d, 1ULL, 0ULL, 2ULL, 1200ULL, 10ULL, height_incr_by_one, time_incr_by_600s
+        { "run2 - steady target_spacing blocks at arbitrary non-limit target 0x1a2b3c4d",
+            0x1a2b3c4d, 1ULL, 0ULL, 2ULL, 1200ULL, 10ULL, height_incr_by_one, time_incr_by_target_spacing
         },
 
-        { "run3 - steady 600s blocks at minimum limit target 0x01010000",
-            0x01010000, 1ULL, 0ULL, 2ULL, 1200ULL, 10ULL, height_incr_by_one, time_incr_by_600s
+        { "run3 - steady target_spacing blocks at minimum limit target 0x01010000",
+            0x01010000, 1ULL, 0ULL, 2ULL, 1200ULL, 10ULL, height_incr_by_one, time_incr_by_target_spacing
         },
 
         { "run4 - from minimum target, a series of halflife schedule jumps, doubling target at each block",
@@ -225,7 +229,7 @@ void produce_asert_test_vectors() {
 
     // Each run produces a bunch of test vectors.
     for (auto& r : run_table) {
-        perform_run(r, chainparams);
+        perform_run(r, powLimit);
         puts("");
     }
 }

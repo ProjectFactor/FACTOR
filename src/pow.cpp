@@ -134,7 +134,7 @@ uint32_t GetNextASERTWorkRequired(const CBlockIndex *pindexPrev,
     // We make no further assumptions other than the height of the prev block must be >= that of the anchor block.
     assert(pindexPrev->nHeight >= pindexAnchorBlock->nHeight);
 
-    const arith_uint256 powLimit = UintToArith256(params.powLimit);
+    const arith_uint256 powLimit = arith_uint256(params.powLimit);
 
     // Special difficulty rule for testnet
     // If the new block's timestamp is more than 2* 10 minutes then allow
@@ -142,7 +142,7 @@ uint32_t GetNextASERTWorkRequired(const CBlockIndex *pindexPrev,
     if (params.fPowAllowMinDifficultyBlocks &&
         (pblock->GetBlockTime() >
          pindexPrev->GetBlockTime() + 2 * params.nPowTargetSpacing)) {
-        return UintToArith256(params.powLimit).GetCompact();
+        return arith_uint256(params.powLimit).GetCompact();
     }
 
     // For nTimeDiff calculation, the timestamp of the parent to the anchor block is used,

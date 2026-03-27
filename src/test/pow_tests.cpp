@@ -65,7 +65,7 @@
 //    const auto consensus = CreateChainParams(*m_node.args, CBaseChainParams::MAIN)->GetConsensus();
 //    uint256 hash;
 //    unsigned int nBits;
-//    nBits = UintToArith256(consensus.powLimit).GetCompact(true);
+//    nBits = arith_uint256(consensus.powLimit).GetCompact(true);
 //    hash.SetHex("0x1");
 //    BOOST_CHECK(!CheckProofOfWork(hash, nBits, consensus));
 //}
@@ -84,7 +84,7 @@
 //    const auto consensus = CreateChainParams(*m_node.args, CBaseChainParams::MAIN)->GetConsensus();
 //    uint256 hash;
 //    unsigned int nBits;
-//    arith_uint256 nBits_arith = UintToArith256(consensus.powLimit);
+//    arith_uint256 nBits_arith = arith_uint256(consensus.powLimit);
 //    nBits_arith *= 2;
 //    nBits = nBits_arith.GetCompact();
 //    hash.SetHex("0x1");
@@ -96,7 +96,7 @@
 //    const auto consensus = CreateChainParams(*m_node.args, CBaseChainParams::MAIN)->GetConsensus();
 //    uint256 hash;
 //    unsigned int nBits;
-//    arith_uint256 hash_arith = UintToArith256(consensus.powLimit);
+//    arith_uint256 hash_arith = arith_uint256(consensus.powLimit);
 //    nBits = hash_arith.GetCompact();
 //    hash_arith *= 2; // hash > nBits
 //    hash = ArithToUint256(hash_arith);
@@ -153,13 +153,13 @@
 //    pow_compact.SetCompact(chainParams->GenesisBlock().nBits, &neg, &over);
 //    BOOST_CHECK(!neg && pow_compact != 0);
 //    BOOST_CHECK(!over);
-//    BOOST_CHECK(UintToArith256(consensus.powLimit) >= pow_compact);
+//    BOOST_CHECK(arith_uint256(consensus.powLimit) >= pow_compact);
 //
 //    // check max target * 4*nPowTargetTimespan doesn't overflow -- see pow.cpp:CalculateNextWorkRequired()
 //    if (!consensus.fPowNoRetargeting) {
 //        arith_uint256 targ_max("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
 //        targ_max /= consensus.nPowTargetTimespan*4;
-//        BOOST_CHECK(UintToArith256(consensus.powLimit) < targ_max);
+//        BOOST_CHECK(arith_uint256(consensus.powLimit) < targ_max);
 //    }
 //}
 //
@@ -216,7 +216,7 @@
 //    std::vector<CBlockIndex> blocks(3000 + 2*24*3600);
 //
 //    const Consensus::Params &params = config.GetChainParams().GetConsensus();
-//    const arith_uint256 powLimit = UintToArith256(params.powLimit);
+//    const arith_uint256 powLimit = arith_uint256(params.powLimit);
 //    arith_uint256 currentPow = powLimit >> 3;
 //    uint32_t initialBits = currentPow.GetCompact();
 //    double dMaxErr = 0.0001166792656486;
@@ -455,7 +455,7 @@
 //    const Consensus::Params &params = config.GetChainParams().GetConsensus();
 //    const int64_t nHalfLife = params.nASERTHalfLife;
 //
-//    const arith_uint256 powLimit = UintToArith256(params.powLimit);
+//    const arith_uint256 powLimit = arith_uint256(params.powLimit);
 //    arith_uint256 initialTarget = powLimit >> 4;
 //    int64_t height = 0;
 //

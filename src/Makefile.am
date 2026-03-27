@@ -893,6 +893,8 @@ if ENABLE_BENCH
 include Makefile.bench.include
 endif
 
+include Makefile.testgen.include
+
 if ENABLE_QT
 include Makefile.qt.include
 endif
