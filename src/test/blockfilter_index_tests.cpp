@@ -10,6 +10,7 @@
 #include <pow.h>
 #include <script/standard.h>
 #include <test/util/blockfilter.h>
+#include <test/util/mining.h>
 #include <test/util/setup_common.h>
 #include <util/time.h>
 #include <validation.h>
@@ -76,7 +77,7 @@ CBlock BuildChainTestingSetup::CreateBlock(const CBlockIndex* prev,
     unsigned int extraNonce = 0;
     IncrementExtraNonce(&block, prev, extraNonce);
 
-    while (!CheckProofOfWork( block, chainparams.GetConsensus())) ++block.nNonce;
+    SolveBlock(block, chainparams.GetConsensus());
 
     return block;
 }

@@ -19,6 +19,7 @@
 #include <noui.h>
 #include <policy/fees.h>
 #include <pow.h>
+#include <test/util/mining.h>
 #include <rpc/blockchain.h>
 #include <rpc/register.h>
 #include <rpc/server.h>
@@ -249,7 +250,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransa
     }
     RegenerateCommitments(block, *Assert(m_node.chainman));
 
-    while (!CheckProofOfWork(block, chainparams.GetConsensus())) ++block.nNonce;
+    SolveBlock(block, chainparams.GetConsensus());
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     Assert(m_node.chainman)->ProcessNewBlock(chainparams, shared_pblock, true, nullptr);

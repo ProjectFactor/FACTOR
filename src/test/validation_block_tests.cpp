@@ -11,6 +11,7 @@
 #include <pow.h>
 #include <random.h>
 #include <script/standard.h>
+#include <test/util/mining.h>
 #include <test/util/script.h>
 #include <test/util/setup_common.h>
 #include <util/time.h>
@@ -89,9 +90,7 @@ std::shared_ptr<CBlock> MinerTestingSetup::FinalizeBlock(std::shared_ptr<CBlock>
 
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 
-    while (!CheckProofOfWork( pblock->GetBlockHeader(), Params().GetConsensus())) {
-        ++(pblock->nNonce);
-    }
+    SolveBlock(*pblock, Params().GetConsensus());
 
     return pblock;
 }
