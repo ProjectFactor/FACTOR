@@ -7,6 +7,7 @@
 #include <chain.h>
 #include <consensus/params.h>
 #include <pow.h>
+#include <asert_table.h>
 #include <primitives/block.h>
 #include <uint256.h>
 
@@ -257,6 +258,84 @@ arith_uint256 CalculateASERT(const arith_uint256 &refTarget,
 
     // we return from only 1 place for copy elision
     return nextTarget;
+}
+
+// ============================================================================
+// FACTOR ASERT — operates in log2(compute) space via precomputed table.
+//
+// Sign convention (OPPOSITE of BCH's target-based formulation):
+//   Blocks too FAST → time_error > 0 → positive exponent → nBits UP (harder)
+//   Blocks too SLOW → time_error < 0 → negative exponent → nBits DOWN (easier)
+// ============================================================================
+
+ASERTResult CalculateFACTORASERT(const FACTORASERTParams& params,
+                                 int32_t anchorNBits,
+                                 int64_t timeDiff,
+                                 int64_t heightDiff) {
+    // --- Input validation ---
+    assert(anchorNBits % 2 == 0);
+    assert(anchorNBits >= params.nBitsMin && anchorNBits <= params.nBitsMax);
+    assert(heightDiff >= 0);
+    assert(params.halfLife > 0);
+    assert(params.targetSpacing > 0);
+    assert(params.nBitsMin >= 2 && params.nBitsMin % 2 == 0);
+    assert(params.nBitsMax <= 1022 && params.nBitsMax % 2 == 0);
+    assert(params.nBitsMin <= params.nBitsMax);
+
+    // --- Step 1: Look up anchor's log2(compute) ---
+    const int anchorIdx = anchorNBits / 2 - 1;
+    const int64_t anchor_log2_compute = LOG2_COMPUTE_TABLE[anchorIdx];
+
+    // --- Step 2: Compute exponent in Q32.32 ---
+    // time_error > 0 when blocks arrive faster than expected (need harder)
+    const int64_t expected_elapsed = heightDiff * params.targetSpacing;
+    const int64_t time_error = expected_elapsed - timeDiff;
+
+    // Overflow-safe Q32.32 conversion via split division.
+    // Direct (time_error << 32) overflows int64_t at |time_error| > ~2.15e9.
+    // This variant overflows only at |time_error| > 2^31 * halfLife (~11.7M years
+    // on mainnet), effectively eliminating the concern.
+    const int64_t integer_part = time_error / params.halfLife;
+    const int64_t remainder    = time_error % params.halfLife;
+    const int64_t exponent_q32 = (integer_part << 32)
+                               + ((remainder << 32) / params.halfLife);
+
+    // --- Step 3: Compute target log2_compute ---
+    const int64_t target_log2_compute = anchor_log2_compute + exponent_q32;
+
+    // --- Step 4: Binary search for closest table entry ---
+    const int idxMin = params.nBitsMin / 2 - 1;
+    const int idxMax = params.nBitsMax / 2 - 1;
+
+    // Check clampedHigh BEFORE clamping the search result.
+    // This detects when the ASERT exponent pushes past what nBitsMax represents.
+    const bool clampedHigh = (target_log2_compute > LOG2_COMPUTE_TABLE[idxMax]);
+
+    int resultIdx;
+    if (target_log2_compute <= LOG2_COMPUTE_TABLE[idxMin]) {
+        resultIdx = idxMin;
+    } else if (target_log2_compute >= LOG2_COMPUTE_TABLE[idxMax]) {
+        resultIdx = idxMax;
+    } else {
+        // Binary search: find lo such that TABLE[lo] <= target < TABLE[lo+1]
+        int lo = idxMin, hi = idxMax;
+        while (lo + 1 < hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (LOG2_COMPUTE_TABLE[mid] <= target_log2_compute) {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        // Pick the closer of the two adjacent entries.
+        // Tiebreak: lower nBits (lower index = easier difficulty).
+        const int64_t dist_lo = target_log2_compute - LOG2_COMPUTE_TABLE[lo];
+        const int64_t dist_hi = LOG2_COMPUTE_TABLE[hi] - target_log2_compute;
+        resultIdx = (dist_lo <= dist_hi) ? lo : hi;
+    }
+
+    const int32_t newNBits = (resultIdx + 1) * 2;
+    return ASERTResult{newNBits, clampedHigh};
 }
 
 uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* pblock, const Consensus::Params& params)

@@ -117,6 +117,7 @@ endif
 BITCOIN_CORE_H = \
   addrdb.h \
   addrman.h \
+  asert_table.h \
   attributes.h \
   banman.h \
   base58.h \

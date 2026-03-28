@@ -16,6 +16,35 @@ class CBlockHeader;
 class CBlockIndex;
 class uint256;
 
+/** Result of the FACTOR ASERT difficulty calculation. */
+struct ASERTResult {
+    int32_t nBits;     ///< New difficulty (always even, in [nBitsMin, nBitsMax])
+    bool clampedHigh;  ///< True if unclamped result would have exceeded nBitsMax
+};
+
+/** Parameters for the FACTOR ASERT DAA. */
+struct FACTORASERTParams {
+    int64_t targetSpacing;  ///< Target time between blocks, in seconds
+    int64_t halfLife;       ///< ASERT half-life, in seconds
+    int32_t nBitsMin;       ///< Minimum allowed nBits (even, >= 2)
+    int32_t nBitsMax;       ///< Maximum allowed nBits (even, <= 1022)
+};
+
+/**
+ * Compute the next FACTOR nBits using the ASERT algorithm.
+ *
+ * Pure function — no chain-state dependencies. Works in log2(compute(nBits))
+ * space via a precomputed lookup table with Q32.32 fixed-point arithmetic.
+ *
+ * Sign convention: a POSITIVE exponent means difficulty INCREASES (higher
+ * nBits). This is the OPPOSITE of BCH's target-based ASERT where a positive
+ * exponent increases the target (decreasing difficulty).
+ */
+ASERTResult CalculateFACTORASERT(const FACTORASERTParams& params,
+                                 int32_t anchorNBits,
+                                 int64_t timeDiff,
+                                 int64_t heightDiff);
+
 uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params&);
 int32_t CalculateDifficultyDelta(const int32_t nBits, const double nPeriodTimeProportionConsumed, const bool isHardDiffRemoved);
 int32_t CalculateInterimDifficultyDelta(const int32_t nBits, const double nPeriodTimeProportionConsumed);
