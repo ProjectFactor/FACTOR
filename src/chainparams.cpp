@@ -108,8 +108,8 @@ public:
         // Two days
         consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
 
-        // TODO: ASERT activation time
-        consensus.asertActivationTime = 1893456000;
+        // ASERT activation time: 2026-04-20 10:09:00 UTC, at FACT's birthday
+        consensus.asertActivationTime = 1776679740;
         consensus.nBitsMin = 32;
         consensus.nBitsMax = 1022;
 
