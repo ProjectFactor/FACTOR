@@ -220,6 +220,13 @@ TestChain100Setup::TestChain100Setup()
 
     // Generate a 100-block chain:
     this->mineBlocks(COINBASE_MATURITY);
+
+    {
+        LOCK(::cs_main);
+        assert(
+            m_node.chainman->ActiveChain().Tip()->GetBlockHash().ToString() ==
+            "ab9ea64a8ece03c633fe76871bc1afab9b5b7c2a3eaced3d2c8398c9741bf5b2");
+    }
 }
 
 void TestChain100Setup::mineBlocks(int num_blocks)
@@ -228,7 +235,7 @@ void TestChain100Setup::mineBlocks(int num_blocks)
     for (int i = 0; i < num_blocks; i++) {
         std::vector<CMutableTransaction> noTxns;
         CBlock b = CreateAndProcessBlock(noTxns, scriptPubKey);
-        SetMockTime(GetTime() + 1);
+        SetMockTime(GetTime() + Params().GetConsensus().nPowTargetSpacing);
         m_coinbase_txns.push_back(b.vtx[0]);
     }
 }

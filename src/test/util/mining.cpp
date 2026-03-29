@@ -10,7 +10,6 @@
 #include <miner.h>
 #include <node/context.h>
 #include <pow.h>
-#include <random.h>
 #include <script/standard.h>
 #include <test/util/script.h>
 #include <util/check.h>
@@ -31,8 +30,9 @@ void SolveBlock(CBlock& block, const Consensus::Params& params)
     mpz_inits(n, g, gcd_val, NULL);
 
     bool solved = false;
+    uint64_t nonce = 0;
     while (!solved) {
-        block.nNonce = GetRand(std::numeric_limits<uint64_t>::max());
+        block.nNonce = nonce++;
         block.nP1.SetNull();
         block.wOffset = 0;
 
