@@ -46,7 +46,7 @@ bool IsASERTEnabled(const Consensus::Params &params,
         return false;
     }
 
-    return pindexPrev->GetMedianTimePast() >= params.asertActivationTime;
+    return pindexPrev->GetBlockTime() >= params.asertActivationTime;
 }
 
 /**
