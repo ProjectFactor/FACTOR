@@ -1,193 +1,283 @@
 #!/usr/bin/env python3
 # Copyright (c) 2020 The Bitcoin developers
+# Copyright (c) 2026 The FACTOR developers
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #
-# This program validates that a Python implementation of the ASERT algorithm
-# produces identical outputs to test vectors generated from the C++
-# implementation in pow.cpp.
+# This program validates that a Python implementation of the FACTOR ASERT
+# algorithm produces identical outputs to test vectors generated from the
+# C++ implementation in pow.cpp.
 #
-# The test vectors must be in 'run*' text files in the current directory.
-# These run files are produced by the gen_asert_test_vectors program
-# which can be built using the Makefile in this folder (you will first
-# need to do a build of BCHN itself. See the description in the Makefile.
+# Usage:
+#   python3 validate_nbits_aserti3_2d.py <vector_file>
+#   python3 validate_nbits_aserti3_2d.py run*
 #
-# If arguments are given, they must be the names of run* files in the
-# current directory.
-# If no arguments are given, the list of run* files is determined by
-# inspecting the current directory and all such files are processed.
+# If no arguments are given, processes all run* files in the current directory.
 
 import os
+import re
 import sys
 
-# Parameters needed by ASERT
-IDEAL_BLOCK_TIME = 10 * 60
-HALFLIFE = 2 * 24 * 3600
-# Integer implementation uses these for fixed point math
-RBITS = 16      # number of bits after the radix for fixed-point math
-RADIX = 1 << RBITS
-# POW Limit
-MAX_BITS = 0x1d00ffff
+
+def load_table(header_path: str) -> list[int]:
+    """Parse LOG2_COMPUTE_TABLE from src/asert_table.h"""
+    table: list[int] = []
+    with open(header_path, "r") as f:
+        in_array = False
+        for line in f:
+            if "LOG2_COMPUTE_TABLE" in line and "{" in line:
+                in_array = True
+            if not in_array:
+                continue
+            # Match entries like "  9087915284LL,"
+            for m in re.finditer(r"(-?\d+)LL", line):
+                table.append(int(m.group(1)))
+            if "};" in line:
+                break
+    assert len(table) == 511, "Expected 511 table entries, got %d" % len(table)
+    return table
 
 
-def bits_to_target(bits):
-    size = bits >> 24
-    assert size <= 0x1d
+def calculate_factor_asert(
+    table: list[int],
+    target_spacing: int,
+    half_life: int,
+    nbits_min: int,
+    nbits_max: int,
+    anchor_nbits: int,
+    time_diff: int,
+    height_diff: int,
+) -> tuple[int, bool]:
+    """Pure-Python implementation of CalculateFACTORASERT.
 
-    word = bits & 0x00ffffff
-    assert 0x8000 <= word <= 0x7fffff
+    Mirrors the C++ implementation exactly:
+    - Q32.32 fixed-point exponent via overflow-safe split division
+    - Binary search for closest table entry
+    - Tiebreak: lower nBits (easier difficulty)
+    """
+    assert anchor_nbits % 2 == 0
+    assert nbits_min <= anchor_nbits <= nbits_max
+    assert height_diff >= 0
 
-    if size <= 3:
-        return word >> (8 * (3 - size))
+    # Step 1: Look up anchor's log2(compute)
+    anchor_idx = anchor_nbits // 2 - 1
+    anchor_log2_compute = table[anchor_idx]
+
+    # Step 2: Compute exponent in Q32.32
+    expected_elapsed = height_diff * target_spacing
+    time_error = expected_elapsed - time_diff
+
+    # Overflow-safe Q32.32 split division (matches C++)
+    # Python handles arbitrary precision, but we replicate the C++ truncation
+    # toward zero for division of negative numbers.
+    if time_error >= 0:
+        integer_part = time_error // half_life
+        remainder = time_error % half_life
     else:
-        return word << (8 * (size - 3))
+        # C++ truncates toward zero: -7 / 3 == -2, -7 % 3 == -1
+        integer_part = -((-time_error) // half_life)
+        remainder = -((-time_error) % half_life)
 
+    exponent_q32 = (integer_part << 32) + ((remainder << 32) // half_life)
 
-MAX_TARGET = bits_to_target(MAX_BITS)
+    # Step 3: target log2_compute
+    target_log2_compute = anchor_log2_compute + exponent_q32
 
+    # Step 4: Binary search
+    idx_min = nbits_min // 2 - 1
+    idx_max = nbits_max // 2 - 1
 
-def target_to_bits(target):
-    assert target > 0
-    if target > MAX_TARGET:
-        print('Warning: target went above maximum ({} > {})'.format(target, MAX_TARGET))
-        target = MAX_TARGET
-    size = (target.bit_length() + 7) // 8
-    mask64 = 0xffffffffffffffff
-    if size <= 3:
-        compact = (target & mask64) << (8 * (3 - size))
+    clamped_high = target_log2_compute > table[idx_max]
+
+    if target_log2_compute <= table[idx_min]:
+        result_idx = idx_min
+    elif target_log2_compute >= table[idx_max]:
+        result_idx = idx_max
     else:
-        compact = (target >> (8 * (size - 3))) & mask64
+        lo, hi = idx_min, idx_max
+        while lo + 1 < hi:
+            mid = lo + (hi - lo) // 2
+            if table[mid] <= target_log2_compute:
+                lo = mid
+            else:
+                hi = mid
+        dist_lo = target_log2_compute - table[lo]
+        dist_hi = table[hi] - target_log2_compute
+        result_idx = lo if dist_lo <= dist_hi else hi
 
-    if compact & 0x00800000:
-        compact >>= 8
-        size += 1
-
-    assert compact == (compact & 0x007fffff)
-    assert size < 256
-    return compact | size << 24
-
-def bits_to_work(bits):
-    return (2 << 255) // (bits_to_target(bits) + 1)
-
-def target_to_hex(target):
-    h = hex(target)[2:]
-    return '0' * (64 - len(h)) + h
-
-def next_bits_aserti3_2d(anchor_bits, time_diff, height_diff):
-    ''' Integer ASERTI algorithm, based on Jonathan Toomim's `next_bits_aserti`
-    implementation in mining.py (see https://github.com/jtoomim/difficulty)'''
-
-    target = bits_to_target(anchor_bits)
-
-    # Ultimately, we want to approximate the following ASERT formula, using only integer (fixed-point) math:
-    #     new_target = old_target * 2^((time_diff - IDEAL_BLOCK_TIME*(height_diff+1)) / HALFLIFE)
-
-    # First, we'll calculate the exponent, using floor division.
-    exponent = int(((time_diff - IDEAL_BLOCK_TIME*(height_diff+1)) * RADIX) / HALFLIFE)
-
-    # Next, we use the 2^x = 2 * 2^(x-1) identity to shift our exponent into the (0, 1] interval.
-    shifts = exponent >> RBITS
-    exponent -= shifts*RADIX
-    assert(exponent >= 0 and exponent < 65536)
-
-    # Now we compute an approximated target * 2^(fractional part) * 65536
-    # target * 2^x ~= target * (1 + 0.695502049*x + 0.2262698*x**2 + 0.0782318*x**3)
-    target *= RADIX + ((195766423245049*exponent + 971821376*exponent**2 + 5127*exponent**3 + 2**47)>>(RBITS*3))
-
-    # Next, we shift to multiply by 2^(integer part). Python doesn't allow shifting by negative integers, so:
-    if shifts < 0:
-        target >>= -shifts
-    else:
-        target <<= shifts
-    # Remove the 65536 multiplier we got earlier
-    target >>= RBITS
-
-    if target == 0:
-        return target_to_bits(1)
-    if target > MAX_TARGET:
-        return MAX_BITS
-
-    return target_to_bits(target)
+    new_nbits = (result_idx + 1) * 2
+    return new_nbits, clamped_high
 
 
-def check_run_file(run_file_path):
-    '''Reads and validates a single run file.'''
+def check_run_file(run_file_path: str, table: list[int]) -> None:
+    """Reads and validates run(s) in a file against Python ASERT.
 
-    run = open(run_file_path, 'r')
+    A file may contain multiple runs separated by blank lines.
+    Each run has its own header (## lines) and data lines.
+    """
 
-    # Initialize these to invalid values to catch their absence
-    anchor_height = 0
-    anchor_time = -1
-    iterations = 0
-
+    anchor_height = None
+    anchor_time = None
+    anchor_nbits = None
+    target_spacing = None
+    half_life = None
+    nbits_min = None
+    nbits_max = None
+    iterations = None
     iteration_counter = 1
-    for l in run:
-        l = l.strip()
-        if l.startswith('## description:'):
-            print(l)
-        elif l == '':
-            pass
-        elif l.startswith('##   anchor height: '):  # height of anchor block
-            anchor_height = int(l[19:])
-            assert anchor_height > 0, "Unexpected anchor height value '{}' is <= 0 in header of {}".format(anchor_height, run_file_path)
-        elif l.startswith('##   anchor parent time: '):    # timestamp of anchor block's parent, in seconds
-            anchor_time = int(l[24:])
-            assert anchor_time >= 0, "Unexpected anchor time value '{}' is < 0 in header of {}".format(anchor_time, run_file_path)
-        elif l.startswith('##   iterations: '):  # number of iterations expected in this run file
-            iterations = int(l[17:])
-            assert iterations > 0, "Unexpected iterations value '{}' is <= 0 in header of {}".format(iterations, run_file_path)
-        elif l.startswith('##   anchor nBits: '):   # anchor block nBits (next target) value
-            anchor_nbits = l[19:]
-            # Sanity check: convert to integer target and back to bits and assert that it remains unchanged
-            anchor_nbits_int = int(anchor_nbits, 16)
-            target = bits_to_target(anchor_nbits_int)
-            bits = target_to_bits(target)
-            bits_str = "0x{:08x}".format(bits)
-            assert bits_str == anchor_nbits, "Unexpected anchor nBits that did not convert to target and back identically: {}".format(anchor_nbits)
-        elif not l.startswith('#'):              # this should be an iteration
-            # Check we have the basic necessities from header
-            assert anchor_height > 0, "Something is wrong in {} - no valid anchor height".format(run_file_path)
-            assert anchor_time > -1, "Something is wrong in {} - no valid anchor time".format(run_file_path)
-            assert iterations > 0, "Something is wrong in {} - no valid number of iterations".format(run_file_path)
+    runs_checked = 0
 
-            split_l = l.split(' ')
-            #print(split_l)
-            (it, height, time_secs, next_nbits_from_file) = [int(split_l[0]), int(split_l[1]), int(split_l[2]), split_l[3]] 
-            assert it == iteration_counter, "Unexpected iteration counter '{}' in {}".format(it, run_file_path)
-            assert it <= iterations, "Number of iterations in {} exceeds header specifications".format(run_file_path)
+    def finalize_run():
+        nonlocal runs_checked
+        if iterations is not None and iterations > 0:
+            assert iteration_counter == iterations + 1, (
+                "Expected %d iterations but found %d in run %d of %s"
+                % (iterations, iteration_counter - 1, runs_checked + 1, run_file_path)
+            )
+            runs_checked += 1
+            print("  OK (%d iterations)" % iterations)
 
-            print("next_bits_aserti3_2d({}, {}, {})".format(int(anchor_nbits, 16), time_secs - anchor_time, height - anchor_height))
-            calculated_nbits = next_bits_aserti3_2d(int(anchor_nbits, 16), time_secs - anchor_time, height - anchor_height)
-            calculated_nbits_str = "0x{:08x}".format(calculated_nbits)
-            assert calculated_nbits_str == next_nbits_from_file, "Target mismatch ({} instead of {} in iteration {} in {}".format(calculated_nbits_str, next_nbits_from_file, it, run_file_path)
-            iteration_counter += 1
-    run.close()
-    # Assert that no iterations were missing from the file
-    assert iteration_counter == iterations + 1
-    print("OK")
+    with open(run_file_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("## description:"):
+                # New run starting — finalize the previous one if any
+                if iterations is not None:
+                    finalize_run()
+                # Reset state for new run
+                anchor_height = None
+                anchor_time = None
+                anchor_nbits = None
+                target_spacing = None
+                half_life = None
+                nbits_min = None
+                nbits_max = None
+                iterations = None
+                iteration_counter = 1
+                print(line)
+            elif line == "":
+                pass
+            elif line.startswith("##   anchor height: "):
+                anchor_height = int(line.split(": ", 1)[1])
+            elif line.startswith("##   anchor time: "):
+                anchor_time = int(line.split(": ", 1)[1])
+            elif line.startswith("##   anchor nBits: "):
+                anchor_nbits = int(line.split(": ", 1)[1])
+            elif line.startswith("##   target spacing: "):
+                target_spacing = int(line.split(": ", 1)[1])
+            elif line.startswith("##   half life: "):
+                half_life = int(line.split(": ", 1)[1])
+            elif line.startswith("##   nBitsMin: "):
+                parts = line.split()
+                nbits_min = int(parts[2])
+                nbits_max = int(parts[4])
+            elif line.startswith("##   iterations: "):
+                iterations = int(line.split(": ", 1)[1])
+            elif line.startswith("##") or line.startswith("#"):
+                pass
+            else:
+                assert anchor_height is not None, (
+                    "Missing anchor height in %s" % run_file_path
+                )
+                assert iterations is not None, (
+                    "Missing iterations in %s" % run_file_path
+                )
+
+                parts = line.split()
+                it = int(parts[0])
+                height = int(parts[1])
+                time_secs = int(parts[2])
+                nbits_from_file = int(parts[3])
+                clamped_from_file = int(parts[4]) != 0
+
+                assert it == iteration_counter, (
+                    "Unexpected iteration %d (expected %d) in run %d of %s"
+                    % (it, iteration_counter, runs_checked + 1, run_file_path)
+                )
+                assert anchor_time is not None, (
+                    "Missing anchor time in %s" % run_file_path
+                )
+                assert target_spacing is not None, (
+                    "Missing target spacing in %s" % run_file_path
+                )
+                assert half_life is not None, (
+                    "Missing half life in %s" % run_file_path
+                )
+                assert nbits_min is not None, (
+                    "Missing nbits min in %s" % run_file_path
+                )
+                assert nbits_max is not None, (
+                    "Missing nbits max in %s" % run_file_path
+                )
+                assert anchor_nbits is not None, (
+                    "Missing anchor nbits in %s" % run_file_path
+                )
+
+                time_diff = time_secs - anchor_time
+                height_diff = height - anchor_height
+
+                calc_nbits, calc_clamped = calculate_factor_asert(
+                    table,
+                    target_spacing,
+                    half_life,
+                    nbits_min,
+                    nbits_max,
+                    anchor_nbits,
+                    time_diff,
+                    height_diff,
+                )
+
+                assert calc_nbits == nbits_from_file, (
+                    "nBits mismatch: Python=%d, C++=%d at iteration %d in %s"
+                    % (calc_nbits, nbits_from_file, it, run_file_path)
+                )
+                assert calc_clamped == clamped_from_file, (
+                    "clampedHigh mismatch: Python=%s, C++=%s at iteration %d in %s"
+                    % (calc_clamped, clamped_from_file, it, run_file_path)
+                )
+
+                iteration_counter += 1
+
+    # Finalize the last run
+    finalize_run()
+    print("Checked %d runs" % runs_checked)
 
 
 def main():
-    '''Reads a run file generated by gen_asert_test_vectors and
-       runs the Python ASERT against it to check that the calculated
-       nBits are the same as for the C++ implementation.'''
-    if len(sys.argv) == 1:
-        run_files = sorted([i for i in os.listdir('.') if (i.startswith("run"))])
-    elif len(sys.argv) > 1:
+    # Locate the lookup table header relative to this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    table_path = os.path.join(script_dir, "..", "..", "src", "asert_table.h")
+    table_path = os.path.normpath(table_path)
+
+    if not os.path.exists(table_path):
+        print("Cannot find %s" % table_path)
+        sys.exit(1)
+
+    table = load_table(table_path)
+    print("Loaded %d-entry lookup table from %s" % (len(table), table_path))
+
+    if len(sys.argv) > 1:
         run_files = sorted(sys.argv[1:])
+    else:
+        run_files = sorted(f for f in os.listdir(".") if f.startswith("run"))
 
     if not run_files:
         print("No run files (test vectors) found!")
-        print("Look into building and running the gen_asert_test_vectors program.")
+        print(
+            "Generate them with: src/contrib/testgen/gen_asert_test_vectors > vectors.txt"
+        )
         sys.exit(1)
 
     for rf in run_files:
-        print("Checking run file {}".format(rf))
-        # The call below will throw an assertion and halt if anything does not validate.
-        check_run_file(rf)
-    print("\nAll OK.")
-    print("This does not mean the Python aserti3_2d implementation is 100% conformant -\n"
-          "it means the test vectors do not show up a difference.")
+        print("\nChecking %s" % rf)
+        check_run_file(rf, table)
 
-if __name__ == '__main__':
+    print("\nAll OK.")
+    print(
+        "This confirms the Python FACTOR ASERT implementation matches "
+        + "the C++ implementation for all test vectors."
+    )
+
+
+if __name__ == "__main__":
     main()

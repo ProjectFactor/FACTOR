@@ -55,24 +55,11 @@ uint16_t CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirst
 bool CheckProofOfWork( const CBlockHeader& block, const Consensus::Params&);
 uint1024 gHash( const CBlockHeader& block, const Consensus::Params&);
 
-arith_uint256 CalculateASERT(const arith_uint256 &refTarget,
-                             const int64_t nPowTargetSpacing,
-                             const int64_t nTimeDiff,
-                             const int64_t nHeightDiff,
-                             const arith_uint256 &powLimit,
-                             const int64_t nHalfLife) noexcept;
-
-uint32_t GetNextASERTWorkRequired(const CBlockIndex *pindexPrev,
-                                  const CBlockHeader *pblock,
-                                  const Consensus::Params &params,
-                                  const CBlockIndex *pindexAnchorBlock)
-                                  noexcept;
-
 /**
  * ASERT caches a special block index for efficiency. If block indices are
  * freed then this needs to be called to ensure no dangling pointer when a new
  * block tree is created.
- * (this is temporary and will be removed after the ASERT constants are fixed)
+ * (this is temporary and will be removed after the ASERT anchor is deeply buried)
  */
 void ResetASERTAnchorBlockCache() noexcept;
 

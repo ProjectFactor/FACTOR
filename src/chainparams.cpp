@@ -108,8 +108,10 @@ public:
         // Two days
         consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
 
-        // TODO: ASERT activation time (2030-01-01 00:00:00 UTC)
+        // TODO: ASERT activation time
         consensus.asertActivationTime = 1893456000;
+        consensus.nBitsMin = 32;
+        consensus.nBitsMax = 1022;
 
         consensus.nRuleChangeActivationThreshold = 639; // 95% of 672 (rounded up from 638.4)
         consensus.nMinerConfirmationWindow = 672; // nPowTargetTimespan / nPowTargetSpacing
@@ -240,8 +242,10 @@ public:
         // One hour
         consensus.nASERTHalfLife = 60 * 60;
 
-        // TODO: ASERT activation time (2030-01-01 00:00:00 UTC)
-        consensus.asertActivationTime = 1893456000;
+        // ASERT always active on testnet
+        consensus.asertActivationTime = 0;
+        consensus.nBitsMin = 32;
+        consensus.nBitsMax = 1022;
 
         consensus.nRuleChangeActivationThreshold = 90; // 75% for testchains
         consensus.nMinerConfirmationWindow = 288; // nPowTargetTimespan / nPowTargetSpacing
@@ -400,8 +404,10 @@ public:
         // Two days
         consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
 
-        // TODO: ASERT activation time (2030-01-01 00:00:00 UTC)
-        consensus.asertActivationTime = 1893456000;
+        // ASERT always active on signet
+        consensus.asertActivationTime = 0;
+        consensus.nBitsMin = 32;
+        consensus.nBitsMax = 1022;
 
         consensus.nRuleChangeActivationThreshold = 1815; // 90% of 2016
         consensus.nMinerConfirmationWindow = 672; // nPowTargetTimespan / nPowTargetSpacing
@@ -488,11 +494,13 @@ public:
 
         // The half life for the ASERT DAA. For every (nASERTHalfLife) seconds behind schedule the blockchain gets,
         // difficulty is cut in half. Doubled if blocks are ahead of schedule.
-        // Two days
-        consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
+        // One hour (match testnet for fast testing)
+        consensus.nASERTHalfLife = 60 * 60;
 
-        // TODO: ASERT activation time (2030-01-01 00:00:00 UTC)
-        consensus.asertActivationTime = 1893456000;
+        // ASERT always active on regtest
+        consensus.asertActivationTime = 0;
+        consensus.nBitsMin = 32;
+        consensus.nBitsMax = 1022;
 
         consensus.nRuleChangeActivationThreshold = 24; // 75% for testchains
         consensus.nMinerConfirmationWindow = 32; // Faster than normal for regtest (32 instead of 2016)
