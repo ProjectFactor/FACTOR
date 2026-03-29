@@ -224,9 +224,19 @@ static uint16_t GetNextFACTORASERTWorkRequired(
     }
     assert(pindexAnchor != nullptr);
 
-    // Normalize anchor nBits to even (floor). Handles odd-nBits anchors
-    // (e.g. signet genesis nBits=33) without asserting.
-    const int32_t anchorNBits = pindexAnchor->nBits & ~1;
+    // Normalize anchor nBits to even (floor) and clamp into [nBitsMin, nBitsMax].
+    // Handles odd-nBits anchors (e.g. signet genesis nBits=33) and guards
+    // against an anchor whose old-DAA difficulty fell outside the ASERT range.
+    int32_t anchorNBits = pindexAnchor->nBits & ~1;
+    if (anchorNBits < params.nBitsMin) {
+        LogPrintf("ASERT: anchor nBits %d below minimum %d, clamping\n",
+                  anchorNBits, params.nBitsMin);
+        anchorNBits = params.nBitsMin;
+    } else if (anchorNBits > params.nBitsMax) {
+        LogPrintf("ASERT: anchor nBits %d above maximum %d, clamping\n",
+                  anchorNBits, params.nBitsMax);
+        anchorNBits = params.nBitsMax;
+    }
 
     // Time and height measured from anchor itself (no +1, no parent).
     const int64_t timeDiff = pindexPrev->GetBlockTime() - pindexAnchor->GetBlockTime();
