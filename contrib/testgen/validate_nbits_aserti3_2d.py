@@ -78,7 +78,15 @@ def calculate_factor_asert(
         integer_part = -((-time_error) // half_life)
         remainder = -((-time_error) % half_life)
 
-    exponent_q32 = (integer_part << 32) + ((remainder << 32) // half_life)
+    # The fractional division must also use C++ truncation-toward-zero semantics.
+    # Python's // floors toward -inf, which differs by 1 when remainder < 0.
+    frac_num = remainder << 32
+    if frac_num >= 0:
+        frac_part = frac_num // half_life
+    else:
+        frac_part = -((-frac_num) // half_life)
+
+    exponent_q32 = (integer_part << 32) + frac_part
 
     # Step 3: target log2_compute
     target_log2_compute = anchor_log2_compute + exponent_q32
