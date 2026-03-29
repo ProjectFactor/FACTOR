@@ -164,3 +164,133 @@ BOOST_AUTO_TEST_CASE(output_always_even) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+
+// ============================================================================
+// Anchor discovery tests — exercises GetASERTAnchorBlock via mainnet params.
+// ============================================================================
+
+// Like BuildMockChain but populates pskip (required by GetASERTAnchorBlock).
+static std::vector<CBlockIndex> BuildMockChainWithSkip(int64_t genesis_time,
+                                                       uint16_t genesis_nBits,
+                                                       int count,
+                                                       int64_t spacing) {
+    std::vector<CBlockIndex> chain(count);
+    for (int i = 0; i < count; i++) {
+        chain[i].nHeight = i;
+        chain[i].nTime = genesis_time + i * spacing;
+        chain[i].nBits = genesis_nBits;
+        chain[i].pprev = (i > 0) ? &chain[i - 1] : nullptr;
+        chain[i].BuildSkip();
+    }
+    return chain;
+}
+
+struct MainnetTestingSetup : public BasicTestingSetup {
+    MainnetTestingSetup() : BasicTestingSetup(CBaseChainParams::MAIN) {}
+};
+
+BOOST_FIXTURE_TEST_SUITE(pow_anchor_tests, MainnetTestingSetup)
+
+// Chain crosses activation boundary at block 5. Each block gets a unique
+// nBits so we can identify exactly which block was chosen as anchor.
+BOOST_AUTO_TEST_CASE(anchor_discovery_at_boundary) {
+    const Consensus::Params& params = Params().GetConsensus();
+    CBlockHeader header;
+    ResetASERTAnchorBlockCache();
+
+    // Place activation boundary at block 5
+    const int64_t genesis_time = params.asertActivationTime - 5 * params.nPowTargetSpacing;
+    auto chain = BuildMockChainWithSkip(genesis_time, 32, 20, params.nPowTargetSpacing);
+
+    // Give every block a unique even nBits in [32, 70]
+    for (int i = 0; i < 20; i++) {
+        chain[i].nBits = static_cast<uint16_t>(32 + 2 * i);
+    }
+    // Block 5 (the anchor) has nBits = 32 + 10 = 42
+
+    // Query from block 6 (first block after anchor): anchor is block 5,
+    // heightDiff=1, timeDiff=1*spacing → steady state → returns anchor nBits
+    uint16_t nBits = GetNextWorkRequired(&chain[6], &header, params);
+    BOOST_CHECK_EQUAL(nBits, 42);
+
+    // Query from block 10: same anchor
+    nBits = GetNextWorkRequired(&chain[10], &header, params);
+    BOOST_CHECK_EQUAL(nBits, 42);
+
+    // Query from block 15: anchor must still be block 5
+    nBits = GetNextWorkRequired(&chain[15], &header, params);
+    BOOST_CHECK_EQUAL(nBits, 42);
+}
+
+// Two independent chains with different anchor nBits. The atomic cache
+// must be invalidated when switching chains (different pointer identity).
+BOOST_AUTO_TEST_CASE(anchor_cache_reorg) {
+    const Consensus::Params& params = Params().GetConsensus();
+    CBlockHeader header;
+    ResetASERTAnchorBlockCache();
+
+    const int64_t genesis_time = params.asertActivationTime - 5 * params.nPowTargetSpacing;
+
+    // Chain A: anchor (block 5) has nBits=100
+    auto chainA = BuildMockChainWithSkip(genesis_time, 32, 20, params.nPowTargetSpacing);
+    chainA[5].nBits = 100;
+
+    // Chain B: anchor (block 5) has nBits=200
+    auto chainB = BuildMockChainWithSkip(genesis_time, 32, 20, params.nPowTargetSpacing);
+    chainB[5].nBits = 200;
+
+    // Query chain A — populates cache with &chainA[5]
+    uint16_t nBitsA = GetNextWorkRequired(&chainA[10], &header, params);
+    BOOST_CHECK_EQUAL(nBitsA, 100);
+
+    // Query chain B — cache must invalidate (different pointer)
+    uint16_t nBitsB = GetNextWorkRequired(&chainB[10], &header, params);
+    BOOST_CHECK_EQUAL(nBitsB, 200);
+
+    // Query chain A again — cache was overwritten by chain B's anchor,
+    // must invalidate again and re-find chain A's anchor
+    uint16_t nBitsA2 = GetNextWorkRequired(&chainA[15], &header, params);
+    BOOST_CHECK_EQUAL(nBitsA2, 100);
+}
+
+// Post-activation blocks arriving near-instantly → difficulty increases.
+BOOST_AUTO_TEST_CASE(anchor_fast_blocks) {
+    const Consensus::Params& params = Params().GetConsensus();
+    CBlockHeader header;
+    ResetASERTAnchorBlockCache();
+
+    const int64_t genesis_time = params.asertActivationTime - 5 * params.nPowTargetSpacing;
+    auto chain = BuildMockChainWithSkip(genesis_time, 32, 200, params.nPowTargetSpacing);
+
+    // 1-second spacing post-activation to generate a large positive exponent
+    for (int i = 6; i < 200; i++) {
+        chain[i].nTime = chain[5].nTime + (i - 5);
+    }
+
+    uint16_t nBits = GetNextWorkRequired(&chain[199], &header, params);
+    BOOST_CHECK_GT(nBits, 32);
+}
+
+// Post-activation blocks at double spacing → difficulty decreases.
+BOOST_AUTO_TEST_CASE(anchor_slow_blocks) {
+    const Consensus::Params& params = Params().GetConsensus();
+    CBlockHeader header;
+    ResetASERTAnchorBlockCache();
+
+    const int64_t genesis_time = params.asertActivationTime - 5 * params.nPowTargetSpacing;
+    auto chain = BuildMockChainWithSkip(genesis_time, 32, 20, params.nPowTargetSpacing);
+
+    // Anchor at nBits=100 so there's room to decrease
+    chain[5].nBits = 100;
+
+    // Double the spacing for post-activation blocks
+    for (int i = 6; i < 20; i++) {
+        chain[i].nTime = chain[5].nTime + (i - 5) * (params.nPowTargetSpacing * 2);
+    }
+
+    uint16_t nBits = GetNextWorkRequired(&chain[15], &header, params);
+    BOOST_CHECK_LT(nBits, 100);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
