@@ -51,9 +51,10 @@ bool IsASERTEnabled(const Consensus::Params &params,
 
 /**
  * Returns a pointer to the anchor block used for ASERT.
- * As anchor we use the first block for which IsASERTEnabled() returns true.
- * This block happens to be the last block which was mined under the old DAA
- * rules.
+ *
+ * The anchor is the first block whose timestamp >= asertActivationTime.
+ * Its difficulty was still set by the old DAA, so it serves as the
+ * reference point from which ASERT computes all subsequent difficulties.
  *
  * This function is meant to be removed some time after the upgrade, once
  * the anchor block is deeply buried, and behind a hard-coded checkpoint.
@@ -202,7 +203,6 @@ ASERTResult CalculateFACTORASERT(const FACTORASERTParams& params,
 // ============================================================================
 static uint16_t GetNextFACTORASERTWorkRequired(
     const CBlockIndex *pindexPrev,
-    const CBlockHeader *pblock,
     const Consensus::Params &params)
 {
     assert(pindexPrev != nullptr);
@@ -219,7 +219,7 @@ static uint16_t GetNextFACTORASERTWorkRequired(
         // Testnet / regtest / signet: anchor is always block 1
         pindexAnchor = pindexPrev->GetAncestor(1);
     } else {
-        // Mainnet: first block where MTP >= activation time
+        // Mainnet: first block where block time >= activation time
         pindexAnchor = GetASERTAnchorBlock(pindexPrev, params);
     }
     assert(pindexAnchor != nullptr);
@@ -258,7 +258,7 @@ uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* 
     assert(pindexLast != nullptr);
 
     if (IsASERTEnabled(params, pindexLast)) {
-        return GetNextFACTORASERTWorkRequired(pindexLast, pblock, params);
+        return GetNextFACTORASERTWorkRequired(pindexLast, params);
     }
 
     // Check if interim DAA is active
