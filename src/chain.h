@@ -19,12 +19,12 @@
  * Maximum amount of time that a block timestamp is allowed to exceed the
  * current network-adjusted time before the block will be accepted.
  *
- * This constrains clock *drift*, not mining duration. A miner stamps the
- * block at template creation, then spends an arbitrary amount of time
- * factoring. By the time the solution is broadcast the timestamp is in the
- * past relative to peers, which is always accepted (subject to the
- * monotonic-timestamp rule). The only failure mode is a miner whose local
- * clock is more than 4 seconds ahead of the network at template creation.
+ * A miner stamps the block at template creation, then spends an arbitrary amount
+ * of time factoring (eg. 180s, which is extremely fast for mainnet diff). Normally by the time the solution is broadcast,
+ * the timestamp, determined before factoring starts, is far in the past.
+ * Assuming monotonic timestamp, the only failure mode is a miner whose local clock is so far ahead (eg. 185s ahead)
+ * that template creation timestamp is still in the future by the time peer receives the mined block,
+ * or if a normal node falls 185s behind.
  */
 static constexpr int64_t MAX_FUTURE_BLOCK_TIME = 4;
 
