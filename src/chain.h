@@ -18,16 +18,22 @@
 /**
  * Maximum amount of time that a block timestamp is allowed to exceed the
  * current network-adjusted time before the block will be accepted.
+ *
+ * A miner stamps the block at template creation, then spends an arbitrary amount
+ * of time factoring (eg. 180s, which is extremely fast for mainnet diff). Normally by the time the solution is broadcast,
+ * the timestamp, determined before factoring starts, is far in the past.
+ * Assuming monotonic timestamp, the only failure mode is a miner whose local clock is so far ahead (eg. 185s ahead)
+ * that template creation timestamp is still in the future by the time peer receives the mined block,
+ * or if a normal node falls 185s behind.
  */
-static constexpr int64_t MAX_FUTURE_BLOCK_TIME = 2 * 60 * 60;
+static constexpr int64_t MAX_FUTURE_BLOCK_TIME = 4;
 
 /**
  * Timestamp window used as a grace period by code that compares external
  * timestamps (such as timestamps passed to RPCs, or wallet key creation times)
- * to block timestamps. This should be set at least as high as
- * MAX_FUTURE_BLOCK_TIME.
+ * to block timestamps.
  */
-static constexpr int64_t TIMESTAMP_WINDOW = MAX_FUTURE_BLOCK_TIME;
+static constexpr int64_t TIMESTAMP_WINDOW = 2 * 60 * 60;
 
 /**
  * Maximum gap between node time and block time used

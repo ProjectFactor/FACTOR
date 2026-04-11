@@ -117,6 +117,7 @@ endif
 BITCOIN_CORE_H = \
   addrdb.h \
   addrman.h \
+  asert_table.h \
   attributes.h \
   banman.h \
   base58.h \
@@ -892,6 +893,8 @@ endif
 if ENABLE_BENCH
 include Makefile.bench.include
 endif
+
+include Makefile.testgen.include
 
 if ENABLE_QT
 include Makefile.qt.include

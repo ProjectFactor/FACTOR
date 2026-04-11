@@ -3384,7 +3384,7 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, BlockValidatio
     }
 
     // Check timestamp against prev
-    if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
+    if (block.GetBlockTime() <= pindexPrev->GetBlockTime())
         return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "time-too-old", "block's timestamp is too early");
 
     // Check timestamp
@@ -4342,6 +4342,7 @@ void UnloadBlockIndex(CTxMemPool* mempool, ChainstateManager& chainman)
     chainman.Unload();
     pindexBestInvalid = nullptr;
     pindexBestHeader = nullptr;
+    ResetASERTAnchorBlockCache();
     if (mempool) mempool->clear();
     vinfoBlockFile.clear();
     nLastBlockFile = 0;

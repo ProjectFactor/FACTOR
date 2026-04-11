@@ -14,6 +14,11 @@ class CChainParams;
 class CScript;
 class CTxIn;
 struct NodeContext;
+namespace Consensus { struct Params; }
+
+/** Solve a block's PoW by finding a valid semiprime factorization via Pollard's rho.
+ *  Sets block.nNonce, block.nP1, and block.wOffset. Requires nBits <= 64. */
+void SolveBlock(CBlock& block, const Consensus::Params& params);
 
 /** Create a blockchain, starting from genesis */
 std::vector<std::shared_ptr<CBlock>> CreateBlockChain(size_t total_height, const CChainParams& params);
