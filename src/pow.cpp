@@ -148,10 +148,19 @@ ASERTResult CalculateFACTORASERT(const FACTORASERTParams& params,
     // Direct (time_error << 32) overflows int64_t at |time_error| > ~2.15e9.
     // This variant overflows only at |time_error| > 2^31 * halfLife (~11.7M years
     // on mainnet), effectively eliminating the concern.
+    //
+    // Shifts go through uint64_t: in C++17, left-shifting a negative signed
+    // value is undefined behavior ([expr.shift]/2), which would fire for every
+    // slow-block header. The unsigned round-trip produces the same bit pattern
+    // on two's-complement platforms and is well-defined.
     const int64_t integer_part = time_error / params.halfLife;
     const int64_t remainder    = time_error % params.halfLife;
-    const int64_t exponent_q32 = (integer_part << 32)
-                               + ((remainder << 32) / params.halfLife);
+    const int64_t integer_shifted =
+        static_cast<int64_t>(static_cast<uint64_t>(integer_part) << 32);
+    const int64_t remainder_shifted =
+        static_cast<int64_t>(static_cast<uint64_t>(remainder) << 32);
+    const int64_t exponent_q32 = integer_shifted
+                               + (remainder_shifted / params.halfLife);
 
     // --- Step 3: Compute target log2_compute ---
     const int64_t target_log2_compute = anchor_log2_compute + exponent_q32;
