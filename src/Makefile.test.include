@@ -64,6 +64,7 @@ endif
 # test_factorn binary #
 BITCOIN_TESTS =\
   test/arith_uint256_tests.cpp \
+  test/asert_tests.cpp \
   test/scriptnum10.h \
   test/addrman_tests.cpp \
   test/amount_tests.cpp \

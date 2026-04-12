@@ -102,6 +102,17 @@ public:
         consensus.nPowTargetSpacing  =   30 * 60;                     // 30 Minutes * 60 Seconds                      |-> Seconds in 30 minutes
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting  = false;
+
+        // The half life for the ASERT DAA. For every (nASERTHalfLife) seconds behind schedule the blockchain gets,
+        // difficulty is cut in half. Doubled if blocks are ahead of schedule.
+        // Two days
+        consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
+
+        // ASERT activation time: 2026-04-20 10:09:00 UTC, at FACT's birthday
+        consensus.asertActivationTime = 1776679740;
+        consensus.nBitsMin = 32;
+        consensus.nBitsMax = 1022;
+
         consensus.nRuleChangeActivationThreshold = 639; // 95% of 672 (rounded up from 638.4)
         consensus.nMinerConfirmationWindow = 672; // nPowTargetTimespan / nPowTargetSpacing
 
@@ -225,6 +236,17 @@ public:
         consensus.nPowTargetSpacing = 5 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.fPowNoRetargeting = false;
+
+        // The half life for the ASERT DAA. For every (nASERTHalfLife) seconds behind schedule the blockchain gets,
+        // difficulty is cut in half. Doubled if blocks are ahead of schedule.
+        // One hour
+        consensus.nASERTHalfLife = 60 * 60;
+
+        // ASERT always active on testnet
+        consensus.asertActivationTime = 0;
+        consensus.nBitsMin = 32;
+        consensus.nBitsMax = 1022;
+
         consensus.nRuleChangeActivationThreshold = 90; // 75% for testchains
         consensus.nMinerConfirmationWindow = 288; // nPowTargetTimespan / nPowTargetSpacing
 
@@ -376,6 +398,17 @@ public:
         consensus.nPowTargetSpacing = 30 * 60;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
+
+        // The half life for the ASERT DAA. For every (nASERTHalfLife) seconds behind schedule the blockchain gets,
+        // difficulty is cut in half. Doubled if blocks are ahead of schedule.
+        // Two days
+        consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
+
+        // ASERT always active on signet
+        consensus.asertActivationTime = 0;
+        consensus.nBitsMin = 32;
+        consensus.nBitsMax = 1022;
+
         consensus.nRuleChangeActivationThreshold = 1815; // 90% of 2016
         consensus.nMinerConfirmationWindow = 672; // nPowTargetTimespan / nPowTargetSpacing
         consensus.MinBIP9WarningHeight = 0;
@@ -458,6 +491,17 @@ public:
         consensus.nPowTargetSpacing = 30 * 60;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
+
+        // The half life for the ASERT DAA. For every (nASERTHalfLife) seconds behind schedule the blockchain gets,
+        // difficulty is cut in half. Doubled if blocks are ahead of schedule.
+        // One hour (match testnet for fast testing)
+        consensus.nASERTHalfLife = 60 * 60;
+
+        // ASERT always active on regtest
+        consensus.asertActivationTime = 0;
+        consensus.nBitsMin = 32;
+        consensus.nBitsMax = 1022;
+
         consensus.nRuleChangeActivationThreshold = 24; // 75% for testchains
         consensus.nMinerConfirmationWindow = 32; // Faster than normal for regtest (32 instead of 2016)
 

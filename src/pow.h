@@ -6,6 +6,7 @@
 #ifndef BITCOIN_POW_H
 #define BITCOIN_POW_H
 
+#include <arith_uint256.h>
 #include <consensus/params.h>
 #include <stdint.h>
 #include <gmp.h>
@@ -14,6 +15,35 @@
 class CBlockHeader;
 class CBlockIndex;
 class uint256;
+
+/** Result of the FACTOR ASERT difficulty calculation. */
+struct ASERTResult {
+    int32_t nBits;     ///< New difficulty (always even, in [nBitsMin, nBitsMax])
+    bool clampedHigh;  ///< True if unclamped result would have exceeded nBitsMax
+};
+
+/** Parameters for the FACTOR ASERT DAA. */
+struct FACTORASERTParams {
+    int64_t targetSpacing;  ///< Target time between blocks, in seconds
+    int64_t halfLife;       ///< ASERT half-life, in seconds
+    int32_t nBitsMin;       ///< Minimum allowed nBits (even, >= 2)
+    int32_t nBitsMax;       ///< Maximum allowed nBits (even, <= 1022)
+};
+
+/**
+ * Compute the next FACTOR nBits using the ASERT algorithm.
+ *
+ * Pure function — no chain-state dependencies. Works in log2(compute(nBits))
+ * space via a precomputed lookup table with Q32.32 fixed-point arithmetic.
+ *
+ * Sign convention: a POSITIVE exponent means difficulty INCREASES (higher
+ * nBits). This is the OPPOSITE of BCH's target-based ASERT where a positive
+ * exponent increases the target (decreasing difficulty).
+ */
+ASERTResult CalculateFACTORASERT(const FACTORASERTParams& params,
+                                 int32_t anchorNBits,
+                                 int64_t timeDiff,
+                                 int64_t heightDiff);
 
 uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params&);
 int32_t CalculateDifficultyDelta(const int32_t nBits, const double nPeriodTimeProportionConsumed, const bool isHardDiffRemoved);
@@ -24,6 +54,17 @@ uint16_t CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirst
 /** Check whether a block hash satisfies the proof-of-work requirement specified by nBits */
 bool CheckProofOfWork( const CBlockHeader& block, const Consensus::Params&);
 uint1024 gHash( const CBlockHeader& block, const Consensus::Params&);
+
+/**
+ * ASERT caches a special block index for efficiency. If block indices are
+ * freed then this needs to be called to ensure no dangling pointer when a new
+ * block tree is created.
+ * (this is temporary and will be removed after the ASERT anchor is deeply buried)
+ */
+void ResetASERTAnchorBlockCache() noexcept;
+
+bool IsASERTEnabled(const Consensus::Params &params,
+                    const CBlockIndex *pindexPrev);
 
 //Factoring pollar rho algorithm
 int rho( uint64_t &g, uint64_t n);

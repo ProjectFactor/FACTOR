@@ -3,17 +3,20 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <arith_uint256.h>
+#include <chain.h>
+#include <consensus/params.h>
 #include <pow.h>
+#include <asert_table.h>
+#include <primitives/block.h>
+#include <uint256.h>
 
 #include <algorithm> //min and max.
-#include <arith_uint256.h>
+#include <atomic>
 #include <cassert>
-#include <chain.h>
 #include <cmath>
 #include <iostream>
 #include <logging.h>
-#include <primitives/block.h>
-#include <uint256.h>
 
 //Blake2b, Scrypt and SHA3-512
 #include <cryptopp/blake2.h>
@@ -31,9 +34,251 @@
 // DeploymentActiveAfter
 #include <deploymentstatus.h>
 
+static std::atomic<const CBlockIndex *> cachedAnchor{nullptr};
+
+void ResetASERTAnchorBlockCache() noexcept {
+    cachedAnchor = nullptr;
+}
+
+bool IsASERTEnabled(const Consensus::Params &params,
+                    const CBlockIndex *pindexPrev) {
+    if (pindexPrev == nullptr) {
+        return false;
+    }
+
+    return pindexPrev->GetBlockTime() >= params.asertActivationTime;
+}
+
+/**
+ * Returns a pointer to the anchor block used for ASERT.
+ *
+ * The anchor is the first block whose timestamp >= asertActivationTime.
+ * Its difficulty was still set by the old DAA, so it serves as the
+ * reference point from which ASERT computes all subsequent difficulties.
+ *
+ * This function is meant to be removed some time after the upgrade, once
+ * the anchor block is deeply buried, and behind a hard-coded checkpoint.
+ *
+ * Preconditions: - pindex must not be nullptr
+ *                - pindex must satisfy: IsASERTEnabled(params, pindex) == true
+ * Postcondition: Returns a pointer to the first (lowest) block for which
+ *                IsASERTEnabled is true, and for which IsASERTEnabled(pprev)
+ *                is false (or for which pprev is nullptr). The return value may
+ *                be pindex itself.
+ */
+static const CBlockIndex *GetASERTAnchorBlock(const CBlockIndex *const pindex,
+                                              const Consensus::Params &params) {
+    assert(pindex);
+
+    // - We check if we have a cached result, and if we do and it is really the
+    //   ancestor of pindex, then we return it.
+    //
+    // - If we do not or if the cached result is not the ancestor of pindex,
+    //   then we proceed with the more expensive walk back to find the ASERT
+    //   anchor block.
+    //
+    // CBlockIndex::GetAncestor() is reasonably efficient; it uses CBlockIndex::pskip
+    // Note that if pindex == cachedAnchor, GetAncestor() here will return cachedAnchor,
+    // which is what we want.
+    const CBlockIndex *lastCached = cachedAnchor.load();
+    if (lastCached && pindex->GetAncestor(lastCached->nHeight) == lastCached)
+        return lastCached;
+
+    // Slow path: walk back until we find the first ancestor for which IsASERTEnabled() == true.
+    const CBlockIndex *anchor = pindex;
+
+    while (anchor->pprev) {
+        // first, skip backwards testing IsASERTEnabled
+        // The below code leverages CBlockIndex::pskip to walk back efficiently.
+        if (IsASERTEnabled(params, anchor->pskip)) {
+            // skip backward
+            anchor = anchor->pskip;
+            continue; // continue skipping
+        }
+        // cannot skip here, walk back by 1
+        if (!IsASERTEnabled(params, anchor->pprev)) {
+            // found it -- highest block where ASERT is not enabled is anchor->pprev, and
+            // anchor points to the first block for which IsASERTEnabled() == true
+            break;
+        }
+        anchor = anchor->pprev;
+    }
+
+    // Overwrite the cache with the anchor we found. More likely than not, the next
+    // time we are asked to validate a header it will be part of same / similar chain, not
+    // some other unrelated chain with a totally different anchor.
+    cachedAnchor = anchor;
+
+    return anchor;
+}
+
+
+// ============================================================================
+// FACTOR ASERT — operates in log2(compute) space via precomputed table.
+//
+// Sign convention (OPPOSITE of BCH's target-based formulation):
+//   Blocks too FAST → time_error > 0 → positive exponent → nBits UP (harder)
+//   Blocks too SLOW → time_error < 0 → negative exponent → nBits DOWN (easier)
+// ============================================================================
+
+ASERTResult CalculateFACTORASERT(const FACTORASERTParams& params,
+                                 int32_t anchorNBits,
+                                 int64_t timeDiff,
+                                 int64_t heightDiff) {
+    // --- Input validation ---
+    assert(anchorNBits % 2 == 0);
+    assert(anchorNBits >= params.nBitsMin && anchorNBits <= params.nBitsMax);
+    assert(heightDiff >= 0);
+    assert(params.halfLife > 0);
+    assert(params.targetSpacing > 0);
+    assert(params.nBitsMin >= 2 && params.nBitsMin % 2 == 0);
+    assert(params.nBitsMax <= 1022 && params.nBitsMax % 2 == 0);
+    assert(params.nBitsMin <= params.nBitsMax);
+
+    // --- Step 1: Look up anchor's log2(compute) ---
+    const int anchorIdx = anchorNBits / 2 - 1;
+    const int64_t anchor_log2_compute = LOG2_COMPUTE_TABLE[anchorIdx];
+
+    // --- Step 2: Compute exponent in Q32.32 ---
+    // time_error > 0 when blocks arrive faster than expected (need harder)
+    const int64_t expected_elapsed = heightDiff * params.targetSpacing;
+    const int64_t time_error = expected_elapsed - timeDiff;
+
+    // Overflow-safe Q32.32 conversion via split division.
+    // Direct (time_error << 32) overflows int64_t at |time_error| > ~2.15e9.
+    // This variant overflows only at |time_error| > 2^31 * halfLife (~11.7M years
+    // on mainnet), effectively eliminating the concern.
+    //
+    // Shifts go through uint64_t: in C++17, left-shifting a negative signed
+    // value is undefined behavior ([expr.shift]/2), which would fire for every
+    // slow-block header. The unsigned round-trip produces the same bit pattern
+    // on two's-complement platforms and is well-defined.
+    const int64_t integer_part = time_error / params.halfLife;
+    const int64_t remainder    = time_error % params.halfLife;
+    const int64_t integer_shifted =
+        static_cast<int64_t>(static_cast<uint64_t>(integer_part) << 32);
+    const int64_t remainder_shifted =
+        static_cast<int64_t>(static_cast<uint64_t>(remainder) << 32);
+    const int64_t exponent_q32 = integer_shifted
+                               + (remainder_shifted / params.halfLife);
+
+    // --- Step 3: Compute target log2_compute ---
+    const int64_t target_log2_compute = anchor_log2_compute + exponent_q32;
+
+    // --- Step 4: Binary search for closest table entry ---
+    const int idxMin = params.nBitsMin / 2 - 1;
+    const int idxMax = params.nBitsMax / 2 - 1;
+
+    // Check clampedHigh BEFORE clamping the search result.
+    // This detects when the ASERT exponent pushes past what nBitsMax represents.
+    const bool clampedHigh = (target_log2_compute > LOG2_COMPUTE_TABLE[idxMax]);
+
+    int resultIdx;
+    if (target_log2_compute <= LOG2_COMPUTE_TABLE[idxMin]) {
+        resultIdx = idxMin;
+    } else if (target_log2_compute >= LOG2_COMPUTE_TABLE[idxMax]) {
+        resultIdx = idxMax;
+    } else {
+        // Binary search: find lo such that TABLE[lo] <= target < TABLE[lo+1]
+        int lo = idxMin, hi = idxMax;
+        while (lo + 1 < hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (LOG2_COMPUTE_TABLE[mid] <= target_log2_compute) {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        // Pick the closer of the two adjacent entries.
+        // Tiebreak: lower nBits (lower index = easier difficulty).
+        const int64_t dist_lo = target_log2_compute - LOG2_COMPUTE_TABLE[lo];
+        const int64_t dist_hi = LOG2_COMPUTE_TABLE[hi] - target_log2_compute;
+        resultIdx = (dist_lo <= dist_hi) ? lo : hi;
+    }
+
+    const int32_t newNBits = (resultIdx + 1) * 2;
+    return ASERTResult{newNBits, clampedHigh};
+}
+
+// ============================================================================
+// FACTOR ASERT caller wrapper — bridges chain state to CalculateFACTORASERT().
+//
+// fPowAllowMinDifficultyBlocks is intentionally NOT checked here.
+// ASERT computes difficulty absolutely from the anchor, not relative to the
+// previous block. A min-difficulty block under ASERT doesn't reset the
+// schedule: it adds +1 to height_diff without meaningfully advancing
+// time_diff, making the exponent *more* positive (harder). The escape
+// hatch is counterproductive under ASERT and must not be invoked.
+// ============================================================================
+static uint16_t GetNextFACTORASERTWorkRequired(
+    const CBlockIndex *pindexPrev,
+    const Consensus::Params &params)
+{
+    assert(pindexPrev != nullptr);
+
+    // Height guard: block 1 is the anchor itself (not ASERT-computed).
+    // Return genesis nBits so block 1 inherits the genesis difficulty.
+    if (pindexPrev->nHeight == 0) {
+        return pindexPrev->nBits;
+    }
+
+    // Anchor selection
+    const CBlockIndex *pindexAnchor;
+    if (params.asertActivationTime == 0) {
+        // Testnet / regtest / signet: anchor is always block 1
+        pindexAnchor = pindexPrev->GetAncestor(1);
+    } else {
+        // Mainnet: first block where block time >= activation time
+        pindexAnchor = GetASERTAnchorBlock(pindexPrev, params);
+    }
+    assert(pindexAnchor != nullptr);
+
+    // Normalize anchor nBits to even (floor) and clamp into [nBitsMin, nBitsMax].
+    // Handles odd-nBits anchors (e.g. signet genesis nBits=33) and guards
+    // against an anchor whose old-DAA difficulty fell outside the ASERT range.
+    int32_t anchorNBits = pindexAnchor->nBits & ~1;
+    if (anchorNBits < params.nBitsMin) {
+        LogPrintf("ASERT: anchor nBits %d below minimum %d, clamping\n",
+                  anchorNBits, params.nBitsMin);
+        anchorNBits = params.nBitsMin;
+    } else if (anchorNBits > params.nBitsMax) {
+        LogPrintf("ASERT: anchor nBits %d above maximum %d, clamping\n",
+                  anchorNBits, params.nBitsMax);
+        anchorNBits = params.nBitsMax;
+    }
+
+    // Time and height measured from anchor itself (no +1, no parent).
+    const int64_t timeDiff = pindexPrev->GetBlockTime() - pindexAnchor->GetBlockTime();
+    const int64_t heightDiff = pindexPrev->nHeight - pindexAnchor->nHeight;
+
+    const FACTORASERTParams asertParams{
+        params.nPowTargetSpacing,
+        params.nASERTHalfLife,
+        params.nBitsMin,
+        params.nBitsMax
+    };
+
+    const ASERTResult result = CalculateFACTORASERT(asertParams, anchorNBits, timeDiff, heightDiff);
+
+    // Circuit breaker: if ASERT wants difficulty above nBitsMax, the
+    // factoring problem has become trivial at max difficulty — an
+    // existential threat. Return nBits=1024 which CheckProofOfWork
+    // rejects (>1023), halting the chain until a hardfork intervenes.
+    if (result.clampedHigh) {
+        LogPrintf("ASERT: clampedHigh — returning nBits=1024 (chain halt)\n");
+        return 1024;
+    }
+
+    return static_cast<uint16_t>(result.nBits);
+}
+
 uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* pblock, const Consensus::Params& params)
 {
     assert(pindexLast != nullptr);
+
+    if (IsASERTEnabled(params, pindexLast)) {
+        return GetNextFACTORASERTWorkRequired(pindexLast, params);
+    }
 
     // Check if interim DAA is active
     const bool isInterimDAAActive = TimeLimitedDeploymentActive(pindexLast, params, Consensus::DEPLOYMENT_INTERIM_DAA);

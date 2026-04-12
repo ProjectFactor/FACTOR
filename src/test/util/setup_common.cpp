@@ -19,6 +19,7 @@
 #include <noui.h>
 #include <policy/fees.h>
 #include <pow.h>
+#include <test/util/mining.h>
 #include <rpc/blockchain.h>
 #include <rpc/register.h>
 #include <rpc/server.h>
@@ -210,7 +211,9 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
 
 TestChain100Setup::TestChain100Setup()
 {
-    SetMockTime(1598887952);
+    // Mock time must be >= genesis block time, otherwise block timestamps
+    // from UpdateTime() will exceed MAX_FUTURE_BLOCK_TIME relative to mock time.
+    SetMockTime(Params().GenesisBlock().nTime);
     constexpr std::array<unsigned char, 32> vchKey = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}};
     coinbaseKey.Set(vchKey.begin(), vchKey.end(), true);
@@ -222,7 +225,7 @@ TestChain100Setup::TestChain100Setup()
         LOCK(::cs_main);
         assert(
             m_node.chainman->ActiveChain().Tip()->GetBlockHash().ToString() ==
-            "571d80a9967ae599cec0448b0b0ba1cfb606f584d8069bd7166b86854ba7a191");
+            "ab9ea64a8ece03c633fe76871bc1afab9b5b7c2a3eaced3d2c8398c9741bf5b2");
     }
 }
 
@@ -232,7 +235,7 @@ void TestChain100Setup::mineBlocks(int num_blocks)
     for (int i = 0; i < num_blocks; i++) {
         std::vector<CMutableTransaction> noTxns;
         CBlock b = CreateAndProcessBlock(noTxns, scriptPubKey);
-        SetMockTime(GetTime() + 1);
+        SetMockTime(GetTime() + Params().GetConsensus().nPowTargetSpacing);
         m_coinbase_txns.push_back(b.vtx[0]);
     }
 }
@@ -249,7 +252,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransa
     }
     RegenerateCommitments(block, *Assert(m_node.chainman));
 
-    while (!CheckProofOfWork(block, chainparams.GetConsensus())) ++block.nNonce;
+    SolveBlock(block, chainparams.GetConsensus());
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     Assert(m_node.chainman)->ProcessNewBlock(chainparams, shared_pblock, true, nullptr);

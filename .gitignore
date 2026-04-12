@@ -14,6 +14,9 @@ src/test/fuzz/fuzz
 src/test/test_factorn
 src/bench/bench_factorn
 src/qt/test/test_bitcoin-qt
+src/contrib/testgen/gen_asert_test_vectors
+contrib/bench/bench_factor_rho
+contrib/bench/bench_factor_popen
 
 # autoreconf
 Makefile.in
