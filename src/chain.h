@@ -22,11 +22,11 @@
  * A miner stamps the block at template creation, then spends an arbitrary amount
  * of time factoring (eg. 180s, which is extremely fast for mainnet diff). Normally by the time the solution is broadcast,
  * the timestamp, determined before factoring starts, is far in the past.
- * Assuming monotonic timestamp, the only failure mode is a miner whose local clock is so far ahead (eg. 185s ahead)
+ * Assuming monotonic timestamp, the only failure mode is a miner whose local clock is so far ahead (eg. 211s ahead)
  * that template creation timestamp is still in the future by the time peer receives the mined block,
- * or if a normal node falls 185s behind.
+ * or if a normal node falls 211s behind.
  */
-static constexpr int64_t MAX_FUTURE_BLOCK_TIME = 4;
+static constexpr int64_t MAX_FUTURE_BLOCK_TIME = 30;
 
 /**
  * Timestamp window used as a grace period by code that compares external
