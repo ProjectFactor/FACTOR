@@ -145,6 +145,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
 
+        // ASERT DAA deployment (uses global defaults for period/threshold)
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].bit = 24;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nStartTime = 1772323200LL;  // 2026-03-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nTimeout = 1803859200LL;    // 2027-03-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].min_activation_height = 0;
+
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
@@ -274,6 +280,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
+
+        // ASERT DAA deployment
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].bit = 24;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].min_activation_height = 0;
 
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
@@ -448,6 +460,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
 
+        // ASERT DAA deployment
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].bit = 24;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].min_activation_height = 0;
+
         vFixedSeeds.clear();
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
@@ -541,6 +559,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
+
+        // ASERT DAA deployment
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].bit = 24;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nStartTime = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].min_activation_height = 0;
 
         UpdateActivationParametersFromArgs(args);
 
