@@ -46,25 +46,26 @@ bool IsASERTEnabled(const Consensus::Params &params,
         return false;
     }
 
-    return pindexPrev->GetBlockTime() >= params.asertActivationTime;
+    return DeploymentActiveAfter(pindexPrev, params, Consensus::DEPLOYMENT_ASERT);
 }
 
 /**
  * Returns a pointer to the anchor block used for ASERT.
  *
- * The anchor is the first block whose timestamp >= asertActivationTime.
- * Its difficulty was still set by the old DAA, so it serves as the
- * reference point from which ASERT computes all subsequent difficulties.
+ * The anchor is the last block whose difficulty was set by the old DAA,
+ * serving as the reference point from which ASERT computes all subsequent
+ * difficulties.
+ *
+ * For ALWAYS_ACTIVE deployments (testnet/signet), the anchor is block 1.
+ * For real BIP9 activation, the anchor is the last block of the LOCKED_IN
+ * period (one before the first block of the ACTIVE period).
  *
  * This function is meant to be removed some time after the upgrade, once
  * the anchor block is deeply buried, and behind a hard-coded checkpoint.
  *
- * Preconditions: - pindex must not be nullptr
- *                - pindex must satisfy: IsASERTEnabled(params, pindex) == true
- * Postcondition: Returns a pointer to the first (lowest) block for which
- *                IsASERTEnabled is true, and for which IsASERTEnabled(pprev)
- *                is false (or for which pprev is nullptr). The return value may
- *                be pindex itself.
+ * Precondition:  pindex must not be nullptr.
+ * Postcondition: Returns a pointer to the anchor block, which is an
+ *                ancestor of (or equal to) pindex.
  */
 static const CBlockIndex *GetASERTAnchorBlock(const CBlockIndex *const pindex,
                                               const Consensus::Params &params) {
@@ -84,25 +85,22 @@ static const CBlockIndex *GetASERTAnchorBlock(const CBlockIndex *const pindex,
     if (lastCached && pindex->GetAncestor(lastCached->nHeight) == lastCached)
         return lastCached;
 
-    // Slow path: walk back until we find the first ancestor for which IsASERTEnabled() == true.
-    const CBlockIndex *anchor = pindex;
+    // StateSinceHeight returns:
+    //   0 for ALWAYS_ACTIVE (no chain walk)
+    //   H for real BIP9 (first block of the ACTIVE period)
+    //
+    // The anchor is the last block computed by the old DAA:
+    //   block 1 for ALWAYS_ACTIVE (genesis has no ASERT history)
+    //   block H-1 for real BIP9 (last block of LOCKED_IN period)
+    int activeSince = g_versionbitscache.StateSinceHeight(
+        pindex, params, Consensus::DEPLOYMENT_ASERT);
+    int anchorHeight = (activeSince <= 1) ? 1 : activeSince - 1;
 
-    while (anchor->pprev) {
-        // first, skip backwards testing IsASERTEnabled
-        // The below code leverages CBlockIndex::pskip to walk back efficiently.
-        if (IsASERTEnabled(params, anchor->pskip)) {
-            // skip backward
-            anchor = anchor->pskip;
-            continue; // continue skipping
-        }
-        // cannot skip here, walk back by 1
-        if (!IsASERTEnabled(params, anchor->pprev)) {
-            // found it -- highest block where ASERT is not enabled is anchor->pprev, and
-            // anchor points to the first block for which IsASERTEnabled() == true
-            break;
-        }
-        anchor = anchor->pprev;
-    }
+    // GetAncestor(h) returns the block itself when h == pindex->nHeight
+    // (the "ancestor at distance 0"), so the first call — where pindexPrev
+    // is at anchorHeight — correctly returns pindexPrev as the anchor.
+    const CBlockIndex *anchor = pindex->GetAncestor(anchorHeight);
+    assert(anchor != nullptr);
 
     // Overwrite the cache with the anchor we found. More likely than not, the next
     // time we are asked to validate a header it will be part of same / similar chain, not
@@ -223,14 +221,7 @@ static uint16_t GetNextFACTORASERTWorkRequired(
     }
 
     // Anchor selection
-    const CBlockIndex *pindexAnchor;
-    if (params.asertActivationTime == 0) {
-        // Testnet / regtest / signet: anchor is always block 1
-        pindexAnchor = pindexPrev->GetAncestor(1);
-    } else {
-        // Mainnet: first block where block time >= activation time
-        pindexAnchor = GetASERTAnchorBlock(pindexPrev, params);
-    }
+    const CBlockIndex *pindexAnchor = GetASERTAnchorBlock(pindexPrev, params);
     assert(pindexAnchor != nullptr);
 
     // Normalize anchor nBits to even (floor) and clamp into [nBitsMin, nBitsMax].

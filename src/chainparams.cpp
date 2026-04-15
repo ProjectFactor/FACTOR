@@ -108,8 +108,6 @@ public:
         // Two days
         consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
 
-        // ASERT activation time: 2026-04-20 10:09:00 UTC, at FACT's birthday
-        consensus.asertActivationTime = 1776679740;
         consensus.nBitsMin = 32;
         consensus.nBitsMax = 1022;
 
@@ -248,8 +246,6 @@ public:
         // One hour
         consensus.nASERTHalfLife = 60 * 60;
 
-        // ASERT always active on testnet
-        consensus.asertActivationTime = 0;
         consensus.nBitsMin = 32;
         consensus.nBitsMax = 1022;
 
@@ -416,8 +412,6 @@ public:
         // Two days
         consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
 
-        // ASERT always active on signet
-        consensus.asertActivationTime = 0;
         consensus.nBitsMin = 32;
         consensus.nBitsMax = 1022;
 
@@ -515,8 +509,6 @@ public:
         // One hour (match testnet for fast testing)
         consensus.nASERTHalfLife = 60 * 60;
 
-        // ASERT always active on regtest
-        consensus.asertActivationTime = 0;
         consensus.nBitsMin = 32;
         consensus.nBitsMax = 1022;
 
