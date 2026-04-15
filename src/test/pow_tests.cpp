@@ -200,6 +200,15 @@ static std::vector<CBlockIndex> BuildBIP9ActivatedChain(int64_t genesis_time,
         chain[i].nVersion = (i >= 32 && i <= 63) ? SIGNAL_VERSION : 1;
         chain[i].BuildSkip();
     }
+
+    // Sanity: signaling window must land in the STARTED period.
+    // If this fires, someone changed regtest nStartTime for DEPLOYMENT_ASERT
+    // and the hardcoded signaling range [32,63] no longer aligns with BIP9.
+    const Consensus::Params& params = Params().GetConsensus();
+    g_versionbitscache.Clear();
+    ThresholdState state = g_versionbitscache.State(&chain[31], params, Consensus::DEPLOYMENT_ASERT);
+    assert(state == ThresholdState::STARTED);
+
     return chain;
 }
 
@@ -216,7 +225,6 @@ BOOST_FIXTURE_TEST_SUITE(pow_anchor_tests, RegtestTestingSetup)
 BOOST_AUTO_TEST_CASE(anchor_discovery_at_boundary) {
     const Consensus::Params& params = Params().GetConsensus();
     CBlockHeader header;
-    g_versionbitscache.Clear();
     ResetASERTAnchorBlockCache();
 
     auto chain = BuildBIP9ActivatedChain(1650443545, 32, 120, params.nPowTargetSpacing);
@@ -239,7 +247,6 @@ BOOST_AUTO_TEST_CASE(anchor_discovery_at_boundary) {
 BOOST_AUTO_TEST_CASE(anchor_cache_reorg) {
     const Consensus::Params& params = Params().GetConsensus();
     CBlockHeader header;
-    g_versionbitscache.Clear();
     ResetASERTAnchorBlockCache();
 
     auto chainA = BuildBIP9ActivatedChain(1650443545, 32, 120, params.nPowTargetSpacing);
@@ -248,17 +255,20 @@ BOOST_AUTO_TEST_CASE(anchor_cache_reorg) {
     auto chainB = BuildBIP9ActivatedChain(1650443545, 32, 120, params.nPowTargetSpacing);
     chainB[ANCHOR_HEIGHT].nBits = 200;
 
-    // Query chain A — populates cache with &chainA[95]
+    // Query chain A — populates anchor cache with &chainA[95]
     uint16_t nBitsA = GetNextWorkRequired(&chainA[100], &header, params);
     BOOST_CHECK_EQUAL(nBitsA, 100);
 
-    // Query chain B — cache must invalidate (different pointer)
-    g_versionbitscache.Clear();
+    // Query chain B — g_versionbitscache is NOT cleared.  The two chains have
+    // disjoint CBlockIndex* addresses, so chainB queries naturally miss on
+    // chainA's cached entries and recompute from scratch (same as a real reorg
+    // where post-fork blocks are distinct allocations).  The anchor pointer
+    // cache (cachedAnchor) still points to chainA[95], forcing the pointer-
+    // identity check to detect the chain switch and re-discover the anchor.
     uint16_t nBitsB = GetNextWorkRequired(&chainB[100], &header, params);
     BOOST_CHECK_EQUAL(nBitsB, 200);
 
-    // Query chain A again — must re-discover chain A's anchor
-    g_versionbitscache.Clear();
+    // Query chain A again — same situation in reverse
     uint16_t nBitsA2 = GetNextWorkRequired(&chainA[110], &header, params);
     BOOST_CHECK_EQUAL(nBitsA2, 100);
 }
@@ -267,7 +277,6 @@ BOOST_AUTO_TEST_CASE(anchor_cache_reorg) {
 BOOST_AUTO_TEST_CASE(anchor_fast_blocks) {
     const Consensus::Params& params = Params().GetConsensus();
     CBlockHeader header;
-    g_versionbitscache.Clear();
     ResetASERTAnchorBlockCache();
 
     auto chain = BuildBIP9ActivatedChain(1650443545, 32, 200, params.nPowTargetSpacing);
@@ -285,7 +294,6 @@ BOOST_AUTO_TEST_CASE(anchor_fast_blocks) {
 BOOST_AUTO_TEST_CASE(anchor_slow_blocks) {
     const Consensus::Params& params = Params().GetConsensus();
     CBlockHeader header;
-    g_versionbitscache.Clear();
     ResetASERTAnchorBlockCache();
 
     auto chain = BuildBIP9ActivatedChain(1650443545, 32, 120, params.nPowTargetSpacing);

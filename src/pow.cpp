@@ -71,16 +71,9 @@ static const CBlockIndex *GetASERTAnchorBlock(const CBlockIndex *const pindex,
                                               const Consensus::Params &params) {
     assert(pindex);
 
-    // - We check if we have a cached result, and if we do and it is really the
-    //   ancestor of pindex, then we return it.
-    //
-    // - If we do not or if the cached result is not the ancestor of pindex,
-    //   then we proceed with the more expensive walk back to find the ASERT
-    //   anchor block.
-    //
-    // CBlockIndex::GetAncestor() is reasonably efficient; it uses CBlockIndex::pskip
-    // Note that if pindex == cachedAnchor, GetAncestor() here will return cachedAnchor,
-    // which is what we want.
+    // Fast path: if we have a cached anchor that is an ancestor of pindex,
+    // return it immediately (no versionbits query needed).
+    // Note that if pindex == cachedAnchor, GetAncestor() returns cachedAnchor.
     const CBlockIndex *lastCached = cachedAnchor.load();
     if (lastCached && pindex->GetAncestor(lastCached->nHeight) == lastCached)
         return lastCached;
@@ -96,9 +89,9 @@ static const CBlockIndex *GetASERTAnchorBlock(const CBlockIndex *const pindex,
         pindex, params, Consensus::DEPLOYMENT_ASERT);
     int anchorHeight = (activeSince <= 1) ? 1 : activeSince - 1;
 
-    // GetAncestor(h) returns the block itself when h == pindex->nHeight
-    // (the "ancestor at distance 0"), so the first call — where pindexPrev
-    // is at anchorHeight — correctly returns pindexPrev as the anchor.
+    // GetAncestor(h) returns the block at height h (the block itself when
+    // h == pindex->nHeight), so when computing difficulty for the first
+    // ACTIVE block — where pindex is the anchor — this returns pindex.
     const CBlockIndex *anchor = pindex->GetAncestor(anchorHeight);
     assert(anchor != nullptr);
 
