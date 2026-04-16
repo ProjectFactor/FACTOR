@@ -31,6 +31,7 @@ constexpr bool ValidDeployment(BuriedDeployment dep) { return dep <= DEPLOYMENT_
 enum DeploymentPos : uint16_t {
     DEPLOYMENT_TESTDUMMY,
     DEPLOYMENT_INTERIM_DAA,
+    DEPLOYMENT_ASERT,
     // NOTE: Also add new deployments to VersionBitsDeploymentInfo in deploymentinfo.cpp
     MAX_VERSION_BITS_DEPLOYMENTS
 };
@@ -120,7 +121,6 @@ struct Params {
     bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
     int64_t nASERTHalfLife;
-    int64_t asertActivationTime;
     int32_t nBitsMin;  // FACTOR ASERT: minimum allowed nBits (easiest difficulty)
     int32_t nBitsMax;  // FACTOR ASERT: maximum allowed nBits (hardest difficulty)
     int64_t nPowTargetTimespan;

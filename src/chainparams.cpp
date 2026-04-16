@@ -108,8 +108,6 @@ public:
         // Two days
         consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
 
-        // ASERT activation time: 2026-04-20 10:09:00 UTC, at FACT's birthday
-        consensus.asertActivationTime = 1776679740;
         consensus.nBitsMin = 32;
         consensus.nBitsMax = 1022;
 
@@ -119,7 +117,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = Consensus::BIP9Deployment::NEVER_ACTIVE;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
-        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].min_activation_height = 1; // No activation delay
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].min_activation_height = 0; // No activation delay
 
         consensus.nMinimumChainWork  = uint256S("0x10a8");
         consensus.defaultAssumeValid = genesis.GetHash(); 
@@ -144,6 +142,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
+
+        // ASERT DAA deployment (uses global defaults for period/threshold)
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].bit = 24;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nStartTime = 1772323200LL;  // 2026-03-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nTimeout = 1803859200LL;    // 2027-03-01
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].min_activation_height = 0;
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -242,8 +246,6 @@ public:
         // One hour
         consensus.nASERTHalfLife = 60 * 60;
 
-        // ASERT always active on testnet
-        consensus.asertActivationTime = 0;
         consensus.nBitsMin = 32;
         consensus.nBitsMax = 1022;
 
@@ -274,6 +276,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
+
+        // ASERT DAA deployment
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].bit = 24;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].min_activation_height = 0;
 
 	    //Number of rounds for gHash to generate random Ws around which to search for semiprimes.
 	    consensus.hashRounds = 1;
@@ -404,8 +412,6 @@ public:
         // Two days
         consensus.nASERTHalfLife = 2 * 24 * 60 * 60;
 
-        // ASERT always active on signet
-        consensus.asertActivationTime = 0;
         consensus.nBitsMin = 32;
         consensus.nBitsMax = 1022;
 
@@ -447,6 +453,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
+
+        // ASERT DAA deployment
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].bit = 24;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].min_activation_height = 0;
 
         vFixedSeeds.clear();
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
@@ -497,8 +509,6 @@ public:
         // One hour (match testnet for fast testing)
         consensus.nASERTHalfLife = 60 * 60;
 
-        // ASERT always active on regtest
-        consensus.asertActivationTime = 0;
         consensus.nBitsMin = 32;
         consensus.nBitsMax = 1022;
 
@@ -541,6 +551,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nPeriod = Consensus::INTERIM_DAA_PERIOD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].nThreshold = Consensus::INTERIM_DAA_THRESHOLD;
         consensus.vDeployments[Consensus::DEPLOYMENT_INTERIM_DAA].max_active_blocks = Consensus::INTERIM_DAA_MAX_ACTIVE;
+
+        // ASERT DAA deployment
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].bit = 24;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nStartTime = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_ASERT].min_activation_height = 0;
 
         UpdateActivationParametersFromArgs(args);
 

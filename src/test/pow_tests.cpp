@@ -5,8 +5,10 @@
 
 #include <chain.h>
 #include <chainparams.h>
+#include <deploymentstatus.h>
 #include <pow.h>
 #include <test/util/setup_common.h>
+#include <versionbits.h>
 
 #include <boost/test/unit_test.hpp>
 
@@ -167,60 +169,77 @@ BOOST_AUTO_TEST_SUITE_END()
 
 
 // ============================================================================
-// Anchor discovery tests — exercises GetASERTAnchorBlock via mainnet params.
+// Anchor discovery tests — exercises GetASERTAnchorBlock via regtest params
+// with real BIP9 activation (not ALWAYS_ACTIVE).
+//
+// Regtest BIP9 timeline for DEPLOYMENT_ASERT (period=32, threshold=24, bit=24):
+//   Period 0 (heights  0-31): DEFINED
+//   Period 1 (heights 32-63): STARTED — all blocks signal
+//   Period 2 (heights 64-95): LOCKED_IN
+//   Period 3 (heights 96+  ): ACTIVE
+//
+// Anchor = block 95 (last block of LOCKED_IN, i.e. activeSince − 1).
 // ============================================================================
 
-// Like BuildMockChain but populates pskip (required by GetASERTAnchorBlock).
-static std::vector<CBlockIndex> BuildMockChainWithSkip(int64_t genesis_time,
-                                                       uint16_t genesis_nBits,
-                                                       int count,
-                                                       int64_t spacing) {
+// Build a mock chain where ASERT activates via BIP9 at the standard regtest
+// boundary.  Blocks 32-63 signal with version bit 24; all others do not.
+// Populates pskip (required by GetAncestor / BIP9 state walks).
+static std::vector<CBlockIndex> BuildBIP9ActivatedChain(int64_t genesis_time,
+                                                        uint16_t genesis_nBits,
+                                                        int count,
+                                                        int64_t spacing) {
+    assert(count > 96);  // must reach ACTIVE state
+    const int32_t SIGNAL_VERSION = VERSIONBITS_TOP_BITS | (1 << 24);
+
     std::vector<CBlockIndex> chain(count);
     for (int i = 0; i < count; i++) {
         chain[i].nHeight = i;
         chain[i].nTime = genesis_time + i * spacing;
         chain[i].nBits = genesis_nBits;
         chain[i].pprev = (i > 0) ? &chain[i - 1] : nullptr;
+        chain[i].nVersion = (i >= 32 && i <= 63) ? SIGNAL_VERSION : 1;
         chain[i].BuildSkip();
     }
+
+    // Sanity: signaling window must land in the STARTED period.
+    // If this fires, someone changed regtest nStartTime for DEPLOYMENT_ASERT
+    // and the hardcoded signaling range [32,63] no longer aligns with BIP9.
+    const Consensus::Params& params = Params().GetConsensus();
+    g_versionbitscache.Clear();
+    ThresholdState state = g_versionbitscache.State(&chain[31], params, Consensus::DEPLOYMENT_ASERT);
+    assert(state == ThresholdState::STARTED);
+
     return chain;
 }
 
-struct MainnetTestingSetup : public BasicTestingSetup {
-    MainnetTestingSetup() : BasicTestingSetup(CBaseChainParams::MAIN) {}
+static const int ANCHOR_HEIGHT = 95;
+
+struct RegtestTestingSetup : public BasicTestingSetup {
+    RegtestTestingSetup() : BasicTestingSetup(CBaseChainParams::REGTEST) {}
 };
 
-BOOST_FIXTURE_TEST_SUITE(pow_anchor_tests, MainnetTestingSetup)
+BOOST_FIXTURE_TEST_SUITE(pow_anchor_tests, RegtestTestingSetup)
 
-// Chain crosses activation boundary at block 5. Each block gets a unique
-// nBits so we can identify exactly which block was chosen as anchor.
+// Verify that GetASERTAnchorBlock finds block 95 (last block of the
+// LOCKED_IN period) as the anchor after real BIP9 activation.
 BOOST_AUTO_TEST_CASE(anchor_discovery_at_boundary) {
     const Consensus::Params& params = Params().GetConsensus();
     CBlockHeader header;
     ResetASERTAnchorBlockCache();
 
-    // Place activation boundary at block 5
-    const int64_t genesis_time = params.asertActivationTime - 5 * params.nPowTargetSpacing;
-    auto chain = BuildMockChainWithSkip(genesis_time, 32, 20, params.nPowTargetSpacing);
+    auto chain = BuildBIP9ActivatedChain(1650443545, 32, 120, params.nPowTargetSpacing);
 
-    // Give every block a unique even nBits in [32, 70]
-    for (int i = 0; i < 20; i++) {
-        chain[i].nBits = static_cast<uint16_t>(32 + 2 * i);
-    }
-    // Block 5 (the anchor) has nBits = 32 + 10 = 42
+    // Give the anchor a unique nBits so we can identify it in the output.
+    chain[ANCHOR_HEIGHT].nBits = 222;
 
-    // Query from block 6 (first block after anchor): anchor is block 5,
-    // heightDiff=1, timeDiff=1*spacing → steady state → returns anchor nBits
-    uint16_t nBits = GetNextWorkRequired(&chain[6], &header, params);
-    BOOST_CHECK_EQUAL(nBits, 42);
+    // Block 96 is first ACTIVE block.  Query for block 97 (pindexPrev=96):
+    // heightDiff=1, timeDiff=1*spacing → steady state → returns anchor nBits.
+    uint16_t nBits = GetNextWorkRequired(&chain[96], &header, params);
+    BOOST_CHECK_EQUAL(nBits, 222);
 
-    // Query from block 10: same anchor
-    nBits = GetNextWorkRequired(&chain[10], &header, params);
-    BOOST_CHECK_EQUAL(nBits, 42);
-
-    // Query from block 15: anchor must still be block 5
-    nBits = GetNextWorkRequired(&chain[15], &header, params);
-    BOOST_CHECK_EQUAL(nBits, 42);
+    // Further along the chain — anchor must still be block 95.
+    nBits = GetNextWorkRequired(&chain[110], &header, params);
+    BOOST_CHECK_EQUAL(nBits, 222);
 }
 
 // Two independent chains with different anchor nBits. The atomic cache
@@ -230,27 +249,27 @@ BOOST_AUTO_TEST_CASE(anchor_cache_reorg) {
     CBlockHeader header;
     ResetASERTAnchorBlockCache();
 
-    const int64_t genesis_time = params.asertActivationTime - 5 * params.nPowTargetSpacing;
+    auto chainA = BuildBIP9ActivatedChain(1650443545, 32, 120, params.nPowTargetSpacing);
+    chainA[ANCHOR_HEIGHT].nBits = 100;
 
-    // Chain A: anchor (block 5) has nBits=100
-    auto chainA = BuildMockChainWithSkip(genesis_time, 32, 20, params.nPowTargetSpacing);
-    chainA[5].nBits = 100;
+    auto chainB = BuildBIP9ActivatedChain(1650443545, 32, 120, params.nPowTargetSpacing);
+    chainB[ANCHOR_HEIGHT].nBits = 200;
 
-    // Chain B: anchor (block 5) has nBits=200
-    auto chainB = BuildMockChainWithSkip(genesis_time, 32, 20, params.nPowTargetSpacing);
-    chainB[5].nBits = 200;
-
-    // Query chain A — populates cache with &chainA[5]
-    uint16_t nBitsA = GetNextWorkRequired(&chainA[10], &header, params);
+    // Query chain A — populates anchor cache with &chainA[95]
+    uint16_t nBitsA = GetNextWorkRequired(&chainA[100], &header, params);
     BOOST_CHECK_EQUAL(nBitsA, 100);
 
-    // Query chain B — cache must invalidate (different pointer)
-    uint16_t nBitsB = GetNextWorkRequired(&chainB[10], &header, params);
+    // Query chain B — g_versionbitscache is NOT cleared.  The two chains have
+    // disjoint CBlockIndex* addresses, so chainB queries naturally miss on
+    // chainA's cached entries and recompute from scratch (same as a real reorg
+    // where post-fork blocks are distinct allocations).  The anchor pointer
+    // cache (cachedAnchor) still points to chainA[95], forcing the pointer-
+    // identity check to detect the chain switch and re-discover the anchor.
+    uint16_t nBitsB = GetNextWorkRequired(&chainB[100], &header, params);
     BOOST_CHECK_EQUAL(nBitsB, 200);
 
-    // Query chain A again — cache was overwritten by chain B's anchor,
-    // must invalidate again and re-find chain A's anchor
-    uint16_t nBitsA2 = GetNextWorkRequired(&chainA[15], &header, params);
+    // Query chain A again — same situation in reverse
+    uint16_t nBitsA2 = GetNextWorkRequired(&chainA[110], &header, params);
     BOOST_CHECK_EQUAL(nBitsA2, 100);
 }
 
@@ -260,12 +279,11 @@ BOOST_AUTO_TEST_CASE(anchor_fast_blocks) {
     CBlockHeader header;
     ResetASERTAnchorBlockCache();
 
-    const int64_t genesis_time = params.asertActivationTime - 5 * params.nPowTargetSpacing;
-    auto chain = BuildMockChainWithSkip(genesis_time, 32, 200, params.nPowTargetSpacing);
+    auto chain = BuildBIP9ActivatedChain(1650443545, 32, 200, params.nPowTargetSpacing);
 
-    // 1-second spacing post-activation to generate a large positive exponent
-    for (int i = 6; i < 200; i++) {
-        chain[i].nTime = chain[5].nTime + (i - 5);
+    // 1-second spacing post-activation
+    for (int i = ANCHOR_HEIGHT + 1; i < 200; i++) {
+        chain[i].nTime = chain[ANCHOR_HEIGHT].nTime + (i - ANCHOR_HEIGHT);
     }
 
     uint16_t nBits = GetNextWorkRequired(&chain[199], &header, params);
@@ -278,18 +296,17 @@ BOOST_AUTO_TEST_CASE(anchor_slow_blocks) {
     CBlockHeader header;
     ResetASERTAnchorBlockCache();
 
-    const int64_t genesis_time = params.asertActivationTime - 5 * params.nPowTargetSpacing;
-    auto chain = BuildMockChainWithSkip(genesis_time, 32, 20, params.nPowTargetSpacing);
+    auto chain = BuildBIP9ActivatedChain(1650443545, 32, 120, params.nPowTargetSpacing);
 
     // Anchor at nBits=100 so there's room to decrease
-    chain[5].nBits = 100;
+    chain[ANCHOR_HEIGHT].nBits = 100;
 
     // Double the spacing for post-activation blocks
-    for (int i = 6; i < 20; i++) {
-        chain[i].nTime = chain[5].nTime + (i - 5) * (params.nPowTargetSpacing * 2);
+    for (int i = ANCHOR_HEIGHT + 1; i < 120; i++) {
+        chain[i].nTime = chain[ANCHOR_HEIGHT].nTime + (i - ANCHOR_HEIGHT) * (params.nPowTargetSpacing * 2);
     }
 
-    uint16_t nBits = GetNextWorkRequired(&chain[15], &header, params);
+    uint16_t nBits = GetNextWorkRequired(&chain[115], &header, params);
     BOOST_CHECK_LT(nBits, 100);
 }
 
