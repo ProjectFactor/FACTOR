@@ -260,6 +260,10 @@ uint16_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader* 
 {
     assert(pindexLast != nullptr);
 
+    if (params.fPowNoRetargeting) {
+        return pindexLast->nBits;
+    }
+
     if (IsASERTEnabled(params, pindexLast)) {
         return GetNextFACTORASERTWorkRequired(pindexLast, params);
     }
